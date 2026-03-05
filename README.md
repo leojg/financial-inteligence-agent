@@ -12,7 +12,7 @@ Built to demonstrate production-grade LLM orchestration patterns applied to real
 
 The agent is a directed LangGraph pipeline with an interrupt before the human review step:
 
-![Agent Architecture](./static/financial_reconciliator_graph.png)
+![Agent Architecture](https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/financial_reconciliator_graph.PNG)
 
 
 | Node | Responsibility |
