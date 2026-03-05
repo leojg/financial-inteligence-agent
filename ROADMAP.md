@@ -28,15 +28,17 @@ The foundational reconciliation pipeline. Multi-document ingestion, LLM-powered 
 
 The core pipeline works but is not yet presentable. This version focuses on reliability, observability, and the scaffolding that makes a project look like a real product rather than a prototype.
 
+**Delivered:**
+- Enhanced README with architecture diagram, setup instructions, and demo GIF
+- GitHub Issues and Milestones aligned to this roadmap
+- SQL persistence across sessions: single SQLite DB (env `FINANCE_AGENT_DB_PATH`) for LangGraph checkpointing (Studio + Streamlit share state), exchange rate cache, and normalized document cache to avoid redundant LLM calls
+- Persistent exchange rate cache (DB table) to avoid redundant API calls
+
 **Planned:**
 - Synthetic sample data (CSV and PDF bank statements for 3 fictitious accounts)
 - Fix known bugs: null handling in review count, false positive rate in suspicious detection, amounts missing from generated report
-- Persistent exchange rate cache to avoid redundant API calls
 - Structured logging throughout the pipeline
 - Unit tests for normalization, duplicate detection, and categorization nodes
-- Enhanced README with architecture diagram, setup instructions, and demo GIF
-- SQL persistence across sessions
-- GitHub Issues and Milestones aligned to this roadmap
 
 ---
 

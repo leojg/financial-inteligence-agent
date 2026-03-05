@@ -15,7 +15,6 @@ The agent is a directed LangGraph pipeline with an interrupt before the human re
 ![Agent Architecture](./static/financial_reconciliator_graph.png)
 
 
-
 | Node | Responsibility |
 |---|---|
 | `ingest` | Loads PDF and XLSX files from a source folder |

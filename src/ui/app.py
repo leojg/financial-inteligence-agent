@@ -9,7 +9,7 @@ load_dotenv()
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from langgraph.checkpoint.memory import MemorySaver
+from agent.db import get_checkpointer
 
 # --- Page config ---
 st.set_page_config(
@@ -59,8 +59,8 @@ def _get_graph():
         from agent.configuration import DEFAULT_CONFIG
         
         if "checkpointer" not in st.session_state:
-            st.session_state.checkpointer = MemorySaver()
-        
+            st.session_state.checkpointer = get_checkpointer()
+
         st.session_state.graph_instance = make_graph(
             DEFAULT_CONFIG,
             checkpointer=st.session_state.checkpointer

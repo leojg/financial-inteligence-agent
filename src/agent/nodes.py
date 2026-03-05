@@ -1,14 +1,18 @@
+import hashlib
+import json
+import logging
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+from langchain_openai import ChatOpenAI
+
+from agent.configuration import ReconciliationConfig
+from agent.db import get_connection
+from agent.services.exchange_service import ExchangeService
 from agent.state import ReconciliationState, RawDocument, Transaction
 from agent.utils.parsers import load_documents
-from agent.configuration import ReconciliationConfig
-from langchain_openai import ChatOpenAI
-from pathlib import Path
-import json
-import uuid
-import logging
-from agent.services.exchange_service import ExchangeService
-from datetime import datetime
-import time
 
 logger = logging.getLogger(__name__) 
 
@@ -34,15 +38,29 @@ def make_normalize_node(config: ReconciliationConfig):
 
     def normalize(state: ReconciliationState) -> dict:
         transactions = []
+        conn = get_connection()
 
         for doc in state["raw_documents"]:
             if isinstance(doc, dict):
                 doc = RawDocument(**doc)
-            
+
+            content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
+            cur = conn.execute(
+                "SELECT transactions_json FROM normalized_document_cache WHERE source_file = ? AND content_hash = ?",
+                (doc.source_file, content_hash),
+            )
+            row = cur.fetchone()
+            cur.close()
+            if row is not None:
+                cached = json.loads(row[0])
+                for t in cached:
+                    transactions.append(Transaction(**t))
+                continue # Transaction already present in the cache
+
             prompt = f"""
                 Extract all transactions from the following bank statement.
                 Infer the account name from the document (bank name, account type, last 4 digits if present).
-                
+
                 Return ONLY a JSON array with this exact schema, no preamble, no markdown:
                 [{{
                     "date": "YYYY-MM-DD",
@@ -53,7 +71,7 @@ def make_normalize_node(config: ReconciliationConfig):
                     "account": "inferred account name",
                     "source_file": "{doc.source_file}"
                 }}]
-                
+
                 Document:
                 {doc.content}
             """
@@ -64,17 +82,22 @@ def make_normalize_node(config: ReconciliationConfig):
                 for t in raw_json:
                     t["id"] = str(uuid.uuid4())
                     transactions.append(Transaction(**t))
+                conn.execute(
+                    "INSERT OR REPLACE INTO normalized_document_cache (source_file, content_hash, transactions_json) VALUES (?, ?, ?)",
+                    (doc.source_file, content_hash, json.dumps([x.model_dump() for x in transactions[-len(raw_json):]])),
+                )
+                conn.commit()
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse LLM response for {doc.source_file}: {e}")
+                logger.warning("Failed to parse LLM response for %s: %s", doc.source_file, e)
                 continue
             except Exception as e:
-                logger.warning(f"Failed to normalize {doc.source_file}: {e}")
+                logger.warning("Failed to normalize %s: %s", doc.source_file, e)
                 continue
 
         return {
             "transactions": transactions
         }
-    
+
     return normalize
 
 

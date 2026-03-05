@@ -1,12 +1,12 @@
 [project]
-name = "agent"
-version = "0.0.1"
-description = "Starter template for making a new agent LangGraph."
+name = "finance-intelligence-agent"
+version = "0.2"
+description = "An AI agent for personal finance intelligence built on LangGraph. Ingests bank statements from multiple accounts, normalizes and categorizes transactions, detects duplicates and suspicious activity, and produces structured reconciliation reports with human-in-the-loop review."
 authors = [
-    { name = "William Fu-Hinthorn", email = "13333726+hinthornw@users.noreply.github.com" },
+    { name = "Leandro Garcia", email = "leojg2091@gmail.com" },
 ]
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 dependencies = [
     "langgraph>=1.0.0",

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.sqlite import SqliteSaver
-from pathlib import Path
 from agent.state import ReconciliationState
 from agent.configuration import ReconciliationConfig, DEFAULT_CONFIG
 from agent.nodes import ingest, make_normalize_node, make_convert_currency_node, make_categorize_node, make_detect_duplicates_node, make_flag_suspicious_node, human_review, generate_report
+from agent.db import get_checkpointer
 
 def make_graph(config: ReconciliationConfig = DEFAULT_CONFIG, checkpointer=None):
 
@@ -37,4 +35,4 @@ def make_graph(config: ReconciliationConfig = DEFAULT_CONFIG, checkpointer=None)
         interrupt_before=["human_review"]
     )
 
-graph = make_graph()
+graph = make_graph(checkpointer=get_checkpointer())

@@ -163,3 +163,5 @@ cython_debug/
 .langgraph_api/
 
 *.db
+*.db-wal
+*.db-shm
