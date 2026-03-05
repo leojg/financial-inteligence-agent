@@ -80,7 +80,15 @@ mkdir -p data/statements
 # copy your files into data/statements/
 ```
 
-> Sample synthetic statements are coming in v0.2. For now, any CSV exported as XLSX or a PDF bank statement will work.
+**Generate sample data (optional)**
+
+To generate synthetic bank statements (3 accounts: Itaú, BROU, Wise) for testing:
+
+```bash
+python scripts/generate_samples.py
+```
+
+Output is written to `./data` (XLSX and PDF files). Use that folder path in the Streamlit sidebar when you run the agent.
 
 ---
 
