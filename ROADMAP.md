@@ -22,7 +22,7 @@ The foundational reconciliation pipeline. Multi-document ingestion, LLM-powered 
 
 ---
 
-## v0.2 — Production Hardening 🔧
+## v0.2 — Production Hardening ✅
 
 *Goal: make the project demo-able, testable, and contributor-ready.*
 
@@ -36,26 +36,23 @@ The core pipeline works but is not yet presentable. This version focuses on reli
 - Synthetic sample data (xlsx and PDF bank statements for 4 fictitious accounts)
 - Structured logging throughout the pipeline
 - Fix known bugs: null handling in review count, false positive rate in suspicious detection, amounts missing from generated report
-
-**Planned:**
 - Unit tests for normalization, duplicate detection, and categorization nodes
 
 ---
 
-## v0.3 — Document OCR Ingestion 📄
+## v0.3 — Document OCR Ingestion 🔧
 
-*Goal: accept real-world bank statements as images and PDFs, not just clean CSVs.*
+*Goal: accept real-world bank statements and reciepts as images, not just clean CSVs. and PDFs*
 
 Real bank statements come as PDFs or scanned images. This version adds a document parsing layer before the existing pipeline, using vision models to extract structured transaction data from unstructured documents.
 
 **Planned:**
-- `parse_documents` node added before `ingest`, accepting PDF and image inputs
+- `parse_documents` node added before `ingest`, accepting image inputs and pdfs containing images
 - Vision API integration (Claude) for receipt and bank statement extraction
 - Confidence scoring per extracted transaction — low-confidence rows flagged for human review
-- Support for multi-page PDFs
 - Fallback handling for documents that cannot be parsed
-- Updated Streamlit UI to accept file uploads (PDF/PNG/JPG)
-- Expanded synthetic dataset with realistic PDF statements
+- Updated Streamlit UI to accept file uploads (PDF/PNG/JPG/XLSX)
+- Expanded synthetic dataset with realistic statements in image and pdf formats
 
 ---
 
