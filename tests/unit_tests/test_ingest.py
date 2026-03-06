@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agent.nodes import ingest
-from agent.state import RawDocument
 
 
 @pytest.fixture

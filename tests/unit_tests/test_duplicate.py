@@ -4,6 +4,7 @@ from agent.configuration import DEFAULT_CONFIG
 from agent.nodes import make_detect_duplicates_node
 from agent.state import Transaction
 
+
 def _base_state(transactions):
     """Common state shape for duplicate-detection tests."""
     return {

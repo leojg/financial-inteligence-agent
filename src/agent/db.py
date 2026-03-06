@@ -1,7 +1,8 @@
-"""
-Shared SQLite persistence: DB path, checkpointer for LangGraph, and app tables
-(exchange_rates, normalized_document_cache). Both LangGraph Studio and Streamlit
-use the same DB via get_checkpointer().
+"""Shared SQLite persistence for the finance agent.
+
+DB path, checkpointer for LangGraph, and app tables (exchange_rates,
+normalized_document_cache). Both LangGraph Studio and Streamlit use the same DB
+via get_checkpointer().
 """
 from __future__ import annotations
 

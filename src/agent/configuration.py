@@ -1,7 +1,12 @@
+"""Agent configuration (model, currency, categories)."""
+
 from dataclasses import dataclass, field
+
 
 @dataclass
 class ReconciliationConfig:
+    """Configuration for the reconciliation graph (LLM, base currency, categories)."""
+
     model_name: str = "gpt-4o-mini"
     temperature: float = 0.0
     base_currency: str = "USD"

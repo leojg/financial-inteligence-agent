@@ -1,24 +1,36 @@
+"""Reconciliation graph nodes: ingest, normalize, convert_currency, categorize, duplicates, suspicious, report."""
+
 import hashlib
 import json
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Callable
 
 from langchain_openai import ChatOpenAI
 
 from agent.configuration import ReconciliationConfig
 from agent.db import get_connection
 from agent.services.exchange_service import ExchangeService
-from agent.state import ReconciliationState, RawDocument, Transaction
+from agent.state import RawDocument, ReconciliationState, Transaction
 from agent.utils.parsers import load_documents
 
-logger = logging.getLogger(__name__) 
+logger = logging.getLogger(__name__)
 
-def ingest(state: ReconciliationState) -> dict:
 
-    documents = load_documents(Path(state["source_folder"]))
+def _llm_content_str(content: Any) -> str:
+    """Return string content from LLM response for JSON parsing."""
+    if isinstance(content, str):
+        return content
+    return json.dumps(content) if content is not None else "[]"
+
+
+def ingest(state: ReconciliationState) -> dict[str, Any]:
+    """Load documents from source_folder and return raw_documents."""
+    source_folder = state["source_folder"]
+    documents = load_documents(Path(source_folder))
 
     raw_documents = [
         RawDocument(
@@ -33,10 +45,12 @@ def ingest(state: ReconciliationState) -> dict:
         "raw_documents": raw_documents
     }
 
-def make_normalize_node(config: ReconciliationConfig):
+
+def make_normalize_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a normalize node that extracts transactions from raw_documents (with cache)."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
 
-    def normalize(state: ReconciliationState) -> dict:
+    def normalize(state: ReconciliationState) -> dict[str, Any]:
         transactions = []
         conn = get_connection()
 
@@ -52,7 +66,7 @@ def make_normalize_node(config: ReconciliationConfig):
             row = cur.fetchone()
             cur.close()
             if row is not None:
-                cached = json.loads(row[0])
+                cached = json.loads(str(row[0]))
                 for t in cached:
                     transactions.append(Transaction(**t))
                 continue # Transaction already present in the cache
@@ -78,7 +92,7 @@ def make_normalize_node(config: ReconciliationConfig):
 
             try:
                 response = llm.invoke(prompt)
-                raw_json = json.loads(response.content)
+                raw_json = json.loads(_llm_content_str(response.content))
                 for t in raw_json:
                     t["id"] = str(uuid.uuid4())
                     transactions.append(Transaction(**t))
@@ -101,11 +115,11 @@ def make_normalize_node(config: ReconciliationConfig):
     return normalize
 
 
-def make_convert_currency_node(config: ReconciliationConfig):
+def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a convert_currency node that converts amounts to base_currency."""
+    exchange_service: ExchangeService = ExchangeService()
 
-    exchange_service = ExchangeService()
-
-    def convert_currency(state: ReconciliationState) -> dict:
+    def convert_currency(state: ReconciliationState) -> dict[str, Any]:
 
         transactions = []
         exchange_rates = dict(state["exchange_rates"])
@@ -149,17 +163,20 @@ def make_convert_currency_node(config: ReconciliationConfig):
     
     return convert_currency
 
-def make_categorize_node(config: ReconciliationConfig):
 
-    # Categorization is a heavy task, so we need to increase the max tokens
-    llm = ChatOpenAI(model=config.model_name, temperature=config.temperature, max_tokens=4096)
+def make_categorize_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a categorize node that assigns categories and sets needs_review."""
+    llm = ChatOpenAI(
+        model=config.model_name,
+        temperature=config.temperature,
+        max_tokens=4096,  # type: ignore[call-arg]
+    )
 
-    # Chunk the transactions into smaller batches to avoid context window errors
-    def _chunk(transactions: list[Transaction], chunk_size: int = 50):
+    def _chunk(transactions: list[Transaction], chunk_size: int = 50) -> Any:
         for i in range(0, len(transactions), chunk_size):
-            yield transactions[i:i+chunk_size]
+            yield transactions[i : i + chunk_size]
 
-    def categorize(state: ReconciliationState) -> dict:
+    def categorize(state: ReconciliationState) -> dict[str, Any]:
         transactions = [
             Transaction(**t) if isinstance(t, dict) else t for t in state["transactions"]
         ]
@@ -187,7 +204,7 @@ def make_categorize_node(config: ReconciliationConfig):
 
             try:
                 response = llm.invoke(prompt)
-                raw_json = json.loads(response.content)
+                raw_json = json.loads(_llm_content_str(response.content))
                 category_map = {item["id"]: item["category"] for item in raw_json}
 
                 for t in batch:
@@ -216,8 +233,9 @@ def make_categorize_node(config: ReconciliationConfig):
 
     return categorize
 
-def make_detect_duplicates_node(config: ReconciliationConfig):
 
+def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a detect_duplicates node that marks duplicate transactions."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
 
     def _dates_within(date_a: str, date_b: str, days: int) -> bool:
@@ -231,10 +249,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
         return abs(amount_a - amount_b) / abs(amount_a) <= tolerance
 
     def _check_duplicate_with_llm(t_a: Transaction, t_b: Transaction) -> tuple[bool, bool, str]:
-        """
-            Returns: (is_duplicate: bool, needs_review: bool, reason: str)
-        """
-
+        """Return (is_duplicate, needs_review, reason) using the LLM."""
         prompt = f"""
         Are these two transactions likely the same transaction appearing in two different bank statements?
         Transaction A: {t_a.date} | {t_a.merchant} | {t_a.amount_original} {t_a.currency} | {t_a.account}
@@ -246,7 +261,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
 
         try:
             response = llm.invoke(prompt)
-            result = json.loads(response.content)
+            result = json.loads(_llm_content_str(response.content))
             is_duplicate = result["is_duplicate"]
             confidence = result["confidence"]
             reason = result.get("reason") or ""
@@ -262,8 +277,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
             logger.warning("LLM duplicate check failed for %s vs %s: %s", t_a.id, t_b.id, e)
             return False, True, "LLM duplicate check failed"
 
-    def detect_duplicates(state: ReconciliationState) -> dict:
-
+    def detect_duplicates(state: ReconciliationState) -> dict[str, Any]:
         transactions = [
             Transaction(**t) if isinstance(t, dict) else t
             for t in state["transactions"]
@@ -321,25 +335,28 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
         
     return detect_duplicates
 
-def make_flag_suspicious_node(config: ReconciliationConfig):
 
-    # Suspicious detection is a heavy task, so we need to increase the max tokens
-    llm = ChatOpenAI(model=config.model_name, temperature=config.temperature, max_tokens=4096)
+def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a flag_suspicious node that marks suspicious transactions."""
+    llm = ChatOpenAI(
+        model=config.model_name,
+        temperature=config.temperature,
+        max_tokens=4096,  # type: ignore[call-arg]
+    )
 
-    def _chunk(transactions: list[Transaction], chunk_size: int = 50):
+    def _chunk(transactions: list[Transaction], chunk_size: int = 50) -> Any:
         for i in range(0, len(transactions), chunk_size):
-            yield transactions[i:i+chunk_size]
+            yield transactions[i : i + chunk_size]
 
-    def flag_suspicious(state: ReconciliationState) -> dict:
+    def flag_suspicious(state: ReconciliationState) -> dict[str, Any]:
         transactions = [
             Transaction(**t) if isinstance(t, dict) else t
             for t in state["transactions"]
         ]
 
-        suspicious_map = {}
+        suspicious_map: dict[str, str] = {}
 
         for batch in _chunk(transactions, 50):
-
             transaction_list = "\n".join([
                 f"{t.id} | {t.date} | {t.merchant} | {t.amount_original} {t.currency} | {t.account} | {t.category}"
                 for t in batch
@@ -370,16 +387,13 @@ def make_flag_suspicious_node(config: ReconciliationConfig):
 
             try:
                 response = llm.invoke(prompt)
-                raw_json = json.loads(response.content)
+                raw_json = json.loads(_llm_content_str(response.content))
                 suspicious_map.update({item["id"]: item.get("reason") or "" for item in raw_json})
             except json.JSONDecodeError as e:
                 logger.warning("Failed to parse suspicious transactions response: %s", e)
-                updated = transactions
-                suspicious = []
 
-
-        updated = []
-        suspicious = []
+        updated: list[Transaction] = []
+        suspicious: list[Transaction] = []
 
         for t in transactions:
             if t.id in suspicious_map:
@@ -394,10 +408,14 @@ def make_flag_suspicious_node(config: ReconciliationConfig):
 
     return flag_suspicious
 
-def human_review(state: ReconciliationState) -> dict:
+
+def human_review(state: ReconciliationState) -> dict[str, Any]:
+    """Return empty updates (placeholder for human-in-the-loop review)."""
     return {}
 
-def generate_report(state: ReconciliationState) -> dict:
+
+def generate_report(state: ReconciliationState) -> dict[str, Any]:
+    """Build a text report from transactions, duplicates, and suspicious lists."""
     transactions = [
         Transaction(**t) if isinstance(t, dict) else t 
         for t in state["transactions"]
@@ -408,7 +426,7 @@ def generate_report(state: ReconciliationState) -> dict:
     suspicious = len(state["suspicious"])
     needs_review = len([t for t in transactions if t.needs_review])
 
-    by_category = {}
+    by_category: dict[str, dict[str, Any]] = {}
 
     for t in transactions:
         cat = t.category or "Uncategorized"

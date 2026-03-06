@@ -1,15 +1,20 @@
-"""
-Streamlit UI for the Financial Reconciliation Agent.
+"""Streamlit UI for the Financial Reconciliation Agent.
+
 Run with: streamlit run src/ui/app.py
 """
 
+from typing import Any
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
-import streamlit as st
-import pandas as pd
-from pathlib import Path
-from agent.db import get_checkpointer
+from pathlib import Path  # noqa: E402
+
+import pandas as pd  # noqa: E402  # type: ignore
+import streamlit as st  # noqa: E402
+
+from agent.db import get_checkpointer  # noqa: E402
 
 # --- Page config ---
 st.set_page_config(
@@ -40,8 +45,9 @@ st.markdown("""
 
 # ── Session state helpers ────────────────────────────────────────────────────
 
-def _init_session():
-    defaults = {
+
+def _init_session() -> None:
+    defaults: dict[str, Any] = {
         "graph_state": None,       # last LangGraph state snapshot
         "graph_instance": None,    # compiled graph (cached)
         "thread_id": "reconciliation-1",
@@ -53,11 +59,12 @@ def _init_session():
             st.session_state[k] = v
 
 
-def _get_graph():
+def _get_graph() -> Any:
+    """Return the compiled graph instance, creating it with checkpointer if needed."""
     if st.session_state.graph_instance is None:
-        from agent.graph import make_graph
         from agent.configuration import DEFAULT_CONFIG
-        
+        from agent.graph import make_graph
+
         if "checkpointer" not in st.session_state:
             st.session_state.checkpointer = get_checkpointer()
 
@@ -67,7 +74,8 @@ def _get_graph():
         )
     return st.session_state.graph_instance
 
-def _transactions_df(transactions: list) -> pd.DataFrame:
+
+def _transactions_df(transactions: list[Any]) -> pd.DataFrame:
     """Convert transaction list (dicts or Pydantic) to a display DataFrame."""
     rows = []
     for t in transactions:
@@ -91,7 +99,9 @@ def _transactions_df(transactions: list) -> pd.DataFrame:
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 
-def render_sidebar():
+
+def render_sidebar() -> None:
+    """Render the sidebar with run controls and thread selector."""
     with st.sidebar:
         st.title("🏦 Reconciliation")
         st.markdown("---")
@@ -131,7 +141,8 @@ def render_sidebar():
 
 # ── Graph execution ──────────────────────────────────────────────────────────
 
-def _run_graph(source_folder: str):
+
+def _run_graph(source_folder: str) -> None:
     if not Path(source_folder).is_dir():
         st.error(f"Folder not found: {source_folder}")
         return
@@ -158,7 +169,7 @@ def _run_graph(source_folder: str):
             st.error(f"Agent error: {e}")
 
 
-def _resume_graph():
+def _resume_graph() -> None:
     graph  = _get_graph()
     config = {"configurable": {"thread_id": st.session_state.thread_id}}
 
@@ -189,7 +200,9 @@ def _resume_graph():
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
 
-def render_main():
+
+def render_main() -> None:
+    """Render the main tab content (overview, transactions, duplicates, suspicious)."""
     state = st.session_state.graph_state
 
     if state is None:
@@ -340,7 +353,9 @@ def render_main():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
+
+def main() -> None:
+    """Initialize session, render sidebar and main content."""
     _init_session()
     render_sidebar()
     render_main()

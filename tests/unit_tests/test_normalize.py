@@ -3,15 +3,15 @@
 import hashlib
 import json
 import sqlite3
-from uuid import UUID
 from unittest.mock import MagicMock, patch
+from uuid import UUID
 
 import pytest
 
 from agent.configuration import DEFAULT_CONFIG
 from agent.db import ensure_schema
 from agent.nodes import make_normalize_node
-from agent.state import RawDocument, Transaction
+from agent.state import RawDocument
 
 
 def _base_state(raw_documents):

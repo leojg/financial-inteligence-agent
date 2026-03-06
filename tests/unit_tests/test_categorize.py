@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agent.configuration import ReconciliationConfig, DEFAULT_CONFIG
+from agent.configuration import DEFAULT_CONFIG
 from agent.nodes import make_categorize_node
 from agent.state import Transaction
 

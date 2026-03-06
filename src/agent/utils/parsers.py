@@ -1,9 +1,11 @@
-from pathlib import Path
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
-import pandas as pd
+"""Document loaders for Excel and PDF bank statements."""
 
-from langchain_core.documents import Document
 import logging
+from pathlib import Path
+
+import pandas as pd
+from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ def load_documents(data_dir: Path) -> list[Document]:
     pdf_loader = DirectoryLoader(
         path=str(data_dir),
         glob="**/*.pdf",
-        loader_cls=PyPDFLoader,
+        loader_cls=PyPDFLoader,  # type: ignore[arg-type]
     )
     pdf_docs = pdf_loader.load()
     excel_docs = load_excel_documents(data_dir)

@@ -1,21 +1,40 @@
+"""LangGraph reconciliation graph definition."""
+
 from __future__ import annotations
 
-from langgraph.graph import StateGraph, START, END
-from agent.state import ReconciliationState
-from agent.configuration import ReconciliationConfig, DEFAULT_CONFIG
-from agent.nodes import ingest, make_normalize_node, make_convert_currency_node, make_categorize_node, make_detect_duplicates_node, make_flag_suspicious_node, human_review, generate_report
+from typing import Any
+
+from langgraph.graph import END, START, StateGraph
+
+from agent.configuration import DEFAULT_CONFIG, ReconciliationConfig
 from agent.db import get_checkpointer
+from agent.nodes import (
+    generate_report,
+    human_review,
+    ingest,
+    make_categorize_node,
+    make_convert_currency_node,
+    make_detect_duplicates_node,
+    make_flag_suspicious_node,
+    make_normalize_node,
+)
+from agent.state import ReconciliationState
 
-def make_graph(config: ReconciliationConfig = DEFAULT_CONFIG, checkpointer=None):
 
+def make_graph(
+    config: ReconciliationConfig = DEFAULT_CONFIG,
+    checkpointer: Any = None,
+) -> Any:
+    """Build and compile the reconciliation StateGraph with optional checkpointer."""
     graph = StateGraph(ReconciliationState)
 
     graph.add_node("ingest", ingest)
-    graph.add_node("normalize", make_normalize_node(config))
-    graph.add_node("convert_currency", make_convert_currency_node(config))
-    graph.add_node("categorize", make_categorize_node(config))
-    graph.add_node("detect_duplicates", make_detect_duplicates_node(config))
-    graph.add_node("flag_suspicious", make_flag_suspicious_node(config))
+    # Node factories return callables; LangGraph's add_node expects _Node types.
+    graph.add_node("normalize", make_normalize_node(config))  # type: ignore[arg-type]
+    graph.add_node("convert_currency", make_convert_currency_node(config))  # type: ignore[arg-type]
+    graph.add_node("categorize", make_categorize_node(config))  # type: ignore[arg-type]
+    graph.add_node("detect_duplicates", make_detect_duplicates_node(config))  # type: ignore[arg-type]
+    graph.add_node("flag_suspicious", make_flag_suspicious_node(config))  # type: ignore[arg-type]
     graph.add_node("human_review", human_review)
     graph.add_node("generate_report", generate_report)
 

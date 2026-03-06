@@ -1,16 +1,15 @@
 """Generate synthetic bank statement sample data for finance-intelligence-agent."""
 
 import logging
-import os
 
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +152,7 @@ def _write_xlsx(path, sheet_name, bank_header_lines, columns, rows):
     # Bank header block
     for i, line in enumerate(bank_header_lines, 1):
         ws.cell(row=i, column=1, value=line).font = Font(bold=(i == 1), name="Arial", size=11 if i == 1 else 9)
-    ws.merge_cells(f"A1:F1")
+    ws.merge_cells("A1:F1")
 
     header_row = len(bank_header_lines) + 2
 
@@ -237,7 +236,6 @@ def generate_brou_xlsx():
 def _build_pdf(path, title, subtitle, account_info, transactions, currency_note):
     doc = SimpleDocTemplate(path, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm,
                             topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
 
     title_style = ParagraphStyle("BankTitle", fontSize=16, fontName="Helvetica-Bold",
                                   textColor=colors.HexColor("#003366"), spaceAfter=4)
