@@ -8,7 +8,8 @@ class ReconciliationConfig:
     categories: list[str] = field(default_factory=lambda: [
         "Groceries", "Dining", "Transport", "Utilities", "Healthcare",
         "Entertainment", "Shopping", "Travel", "Education", "Transfer",
-        "Fees & Charges", "Salary", "Freelance", "Other Income", "Other"
+        "Fees & Charges", "Salary", "Freelance", "Other Income", "Other",
+        "Rent"
     ])
 
 DEFAULT_CONFIG = ReconciliationConfig()

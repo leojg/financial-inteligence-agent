@@ -347,19 +347,24 @@ def make_flag_suspicious_node(config: ReconciliationConfig):
 
             prompt = f"""
             Analyze the following transactions and identify any suspicious or unusual activity.
-            
+            Only flag transactions that clearly warrant human review. When in doubt, do not flag.
+
             Consider:
-            - Unusually large amounts compared to similar transactions
-            - Same merchant charged multiple times on the same day
+            - Amounts that are clearly out of line(e.g. duplicate charge or 10x what you would expect for that category), not just the largest in the list
+            - Same merchant charged multiple times on the same day (possible duplicate charge)
             - Recurring payments that changed amount significantly
             - Unexpected foreign currency charges
-            - Any other patterns that seem anomalous
+            - Other clear inconsistencies: e.g. dupplicate charge for the same service, amounts that suggest a billing error or unauthorized use.
             
+            Do not flag: income(salary, freelance, other income, transfer credits), routine subscriptions(Netflix, Spotify, etc.), normal grocery/dining/transportation spending, utility bills, transfers between user's own accounts.
+            Do not flag income for being high or variable. Lump-sum and variable income are normal.
+            Do not flag large routine charges such as rent or utilities
+
             Transactions (id | date | merchant | amount currency | account | category):
             {transaction_list}
 
             Return ONLY a JSON array of suspicious transaction ids, no preamble, no markdown.
-            If nothing is suspicious return []:
+            If nothing is clearly suspicious return []:
             [{{"id": "transaction-id", "reason": "brief reason"}}]
             """
 
