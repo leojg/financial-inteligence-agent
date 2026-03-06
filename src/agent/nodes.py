@@ -236,7 +236,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
         Transaction B: {t_b.date} | {t_b.merchant} | {t_b.amount_original} {t_b.currency} | {t_b.account}
 
         Reply ONLY with JSON, no preamble, no markdown:
-        {{"is_duplicate": true/false, "confidence": "high/medium/low", "reason": "..."}}
+        {{"is_duplicate": true/false, "confidence": "high/medium/low", "reason": "brief reason"}}
         """
 
         try:
@@ -244,7 +244,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
             result = json.loads(response.content)
             is_duplicate = result["is_duplicate"]
             confidence = result["confidence"]
-            reason = result["reason"]
+            reason = result.get("reason") or ""
 
             if is_duplicate:
                 return True, False, reason
@@ -361,7 +361,7 @@ def make_flag_suspicious_node(config: ReconciliationConfig):
             try:
                 response = llm.invoke(prompt)
                 raw_json = json.loads(response.content)
-                suspicious_map.update({item["id"]: item["reason"] for item in raw_json})
+                suspicious_map.update({item["id"]: item.get("reason") or "" for item in raw_json})
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to parse suspicious transactions response: {e}")
                 updated = transactions
