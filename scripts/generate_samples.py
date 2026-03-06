@@ -1,5 +1,8 @@
 """Generate synthetic bank statement sample data for finance-intelligence-agent."""
 
+import logging
+import os
+
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -8,7 +11,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import cm
-import os
+
+logger = logging.getLogger(__name__)
 
 OUT = "./data"
 
@@ -205,7 +209,7 @@ def generate_itau_xlsx():
             for i, (d, m, a, c, _) in enumerate(ITAU_TRANSACTIONS)
         ],
     )
-    print(f"✓ {path}")
+    logger.info("Generated %s", path)
 
 
 def generate_brou_xlsx():
@@ -225,7 +229,7 @@ def generate_brou_xlsx():
             for i, (d, m, a, c, _) in enumerate(BROU_TRANSACTIONS)
         ],
     )
-    print(f"✓ {path}")
+    logger.info("Generated %s", path)
 
 
 # ── PDF generators ───────────────────────────────────────────────────────────
@@ -304,7 +308,7 @@ def _build_pdf(path, title, subtitle, account_info, transactions, currency_note)
     ]))
     story.append(st)
     doc.build(story)
-    print(f"✓ {path}")
+    logger.info("Generated %s", path)
 
 
 def _get_account_short(title):
@@ -344,8 +348,9 @@ def generate_visa_pdf():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     generate_itau_xlsx()
     generate_brou_xlsx()
     generate_wise_pdf()
     generate_visa_pdf()
-    print("\nAll 4 sample files generated.")
+    logger.info("All 4 sample files generated.")

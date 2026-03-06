@@ -11,14 +11,14 @@ def load_excel_documents(folder_path: Path) -> list[Document]:
     """Load Excel files as LangChain Documents using pandas."""
     documents = []
     excel_files = list(folder_path.glob("*.xlsx")) + list(folder_path.glob("*.xls"))
-    logger.info(f"Found {len(excel_files)} Excel files in {folder_path}")
+    logger.info("Found %d Excel files in %s", len(excel_files), folder_path)
 
     for file_path in excel_files:
         try:
-            logger.info(f"Loading Excel file: {file_path}")
+            logger.info("Loading Excel file: %s", file_path)
             df = pd.read_excel(file_path)
             if df.empty:
-                logger.warning(f"Empty Excel file: {file_path}")
+                logger.warning("Empty Excel file: %s", file_path)
                 continue
             content = df.to_markdown(index=False)
             doc = Document(
@@ -32,10 +32,10 @@ def load_excel_documents(folder_path: Path) -> list[Document]:
             )
             documents.append(doc)
         except Exception as e:
-            logger.error(f"Failed to load {file_path.name}: {e}")
+            logger.error("Failed to load %s: %s", file_path.name, e)
             continue
 
-    logger.info(f"Successfully loaded {len(documents)} Excel files")
+    logger.info("Successfully loaded %d Excel files", len(documents))
     return documents
 
 

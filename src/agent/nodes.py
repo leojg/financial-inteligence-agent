@@ -128,7 +128,12 @@ def make_convert_currency_node(config: ReconciliationConfig):
                     if rate:
                         exchange_rates[cache_key] = rate
                     else:
-                        logger.warning(f"No exchange rate found for {t.currency} on {t.date}, amount_base will be null for transaction {t.id}")
+                        logger.warning(
+                            "No exchange rate for %s on %s, amount_base null for transaction %s",
+                            t.currency,
+                            t.date,
+                            t.id,
+                        )
 
                 rate = exchange_rates.get(cache_key)
 
@@ -199,7 +204,7 @@ def make_categorize_node(config: ReconciliationConfig):
                     updated.append(t)
                 
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse categorization response: {e}")
+                logger.warning("Failed to parse categorization response: %s", e)
                 # Mark all as needs_review if batch fails
                 for t in batch:
                     updated.append(t.model_copy(update={
@@ -254,7 +259,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig):
                 return False, False, reason
 
         except Exception as e:
-            logger.warning(f"LLM duplicate check failed for {t_a.id} vs {t_b.id}: {e}")
+            logger.warning("LLM duplicate check failed for %s vs %s: %s", t_a.id, t_b.id, e)
             return False, True, "LLM duplicate check failed"
 
     def detect_duplicates(state: ReconciliationState) -> dict:
@@ -363,7 +368,7 @@ def make_flag_suspicious_node(config: ReconciliationConfig):
                 raw_json = json.loads(response.content)
                 suspicious_map.update({item["id"]: item.get("reason") or "" for item in raw_json})
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse suspicious transactions response: {e}")
+                logger.warning("Failed to parse suspicious transactions response: %s", e)
                 updated = transactions
                 suspicious = []
 
