@@ -34,10 +34,10 @@ The core pipeline works but is not yet presentable. This version focuses on reli
 - SQL persistence across sessions: single SQLite DB (env `FINANCE_AGENT_DB_PATH`) for LangGraph checkpointing (Studio + Streamlit share state), exchange rate cache, and normalized document cache to avoid redundant LLM calls
 - Persistent exchange rate cache (DB table) to avoid redundant API calls
 - Synthetic sample data (xlsx and PDF bank statements for 4 fictitious accounts)
+- Structured logging throughout the pipeline
+- Fix known bugs: null handling in review count, false positive rate in suspicious detection, amounts missing from generated report
 
 **Planned:**
-- Fix known bugs: null handling in review count, false positive rate in suspicious detection, amounts missing from generated report
-- Structured logging throughout the pipeline
 - Unit tests for normalization, duplicate detection, and categorization nodes
 
 ---
