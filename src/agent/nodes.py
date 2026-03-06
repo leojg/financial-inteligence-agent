@@ -402,7 +402,12 @@ def generate_report(state: ReconciliationState) -> dict:
 
     for t in transactions:
         cat = t.category or "Uncategorized"
-        by_category[cat] = by_category.get(cat, 0) + 1
+        prev = by_category.get(cat, {"count": 0, "amount": 0.0})
+        amount = abs(t.amount_base) if t.amount_base is not None else 0.0
+        by_category[cat] = {
+            "count": prev["count"] + 1,
+            "amount": round(prev["amount"] + amount, 2)
+        }
 
     report = f"""
     RECONCILIATION REPORT
