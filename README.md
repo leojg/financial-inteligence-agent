@@ -105,6 +105,10 @@ streamlit run src/ui/app.py
 3. Review flagged transactions in the **Review** tab
 4. Click **Resume** to generate the final report
 
+### Execution Demo
+
+<img src="https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/financial-agent-gif.gif" alt="Execution Demo" width="900" />
+
 **LangGraph Studio**
 
 ```bash
@@ -129,8 +133,8 @@ finance-intelligence-agent/
 │   │   │   └── exchange_service.py
 │   │   └── utils/
 │   │       └── parsers.py      # PDF and XLSX document loaders
-│   └── ui/
-│       └── app.py              # Streamlit UI
+│   │   └── ui/
+│   │       └── app.py              # Streamlit UI
 ├── tests/
 │   ├── unit_tests/
 │   └── integration_tests/
