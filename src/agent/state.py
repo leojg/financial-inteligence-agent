@@ -37,12 +37,15 @@ def keep_last(old: list[Any], new: list[Any]) -> list[Any]:
     """Reducer that keeps the last value of the list (for state updates)."""
     return new if new else old
 
+def merge_raw_documents(old: list[Any], new: list[Any]) -> list[Any]:
+    """Append new raw_documents to existing (for parallel ingest + ingest_images)."""
+    return (old or []) + (new or [])
 
 class ReconciliationState(TypedDict):
     """Graph state: source_folder, raw_documents, transactions, duplicates, suspicious, report."""
 
     source_folder: str
-    raw_documents: list[RawDocument]
+    raw_documents: Annotated[list[RawDocument], merge_raw_documents]
     transactions: Annotated[list[Transaction], keep_last]
     duplicates: list[Transaction]
     suspicious: list[Transaction]

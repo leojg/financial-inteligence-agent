@@ -8,6 +8,8 @@ class ReconciliationConfig:
     """Configuration for the reconciliation graph (LLM, base currency, categories)."""
 
     model_name: str = "gpt-4o-mini"
+    vision_model_name: str = "claude-sonnet-4-6"
+    vision_max_tokens: int = 1024
     temperature: float = 0.0
     base_currency: str = "USD"
     categories: list[str] = field(default_factory=lambda: [

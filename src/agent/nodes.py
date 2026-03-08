@@ -16,6 +16,9 @@ from agent.db import get_connection
 from agent.services.exchange_service import ExchangeService
 from agent.state import RawDocument, ReconciliationState, Transaction
 from agent.utils.parsers import load_documents
+from langchain_anthropic import ChatAnthropic
+import base64
+from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,83 @@ def ingest(state: ReconciliationState) -> dict[str, Any]:
     return {
         "raw_documents": raw_documents
     }
+
+def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a ingest_images node that loads images from source_folder and returns raw_images."""
+    llm = ChatAnthropic(model=config.vision_model_name, max_tokens=config.vision_max_tokens)
+
+    def ingest_images(state: ReconciliationState) -> dict[str, Any]:
+        source_folder = Path(state["source_folder"])
+
+        images = []
+
+        for ext in ["png", "jpg", "jpeg"]:
+            for path in source_folder.rglob(f"*.{ext}"):
+                if not path.is_file():
+                    continue
+                data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
+                media_type = "image/png" if ext == "png" else "image/jpeg"
+                images.append((str(path), data, media_type))
+
+        content = []
+
+        for path, data, media_type in images:
+            content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": media_type, "data": data},
+            })
+        
+        content.append({
+            "type": "text",
+            "text": """Extract all line items and totals from this receipt. 
+            Include the date, amount and description of the charges.
+            Also include currency if present, it it's not present, do not include it.
+            Include a confidence score for each transaction between 0 and 1.
+            Do not include any other text in your response, no markdown blocks.
+            If the receipt does not clearly states that a date is the date of the charge, do not include a date.
+            Return a single JSON object with the format:
+            { "results": [ { "transactions": [ { "date": "YYYY-MM-DD", "amount": number, "description": "..." } ], "confidence": 0-1 }, ... ] }
+            """
+            })
+
+        messages = [HumanMessage(content=content)]
+        response = llm.invoke(messages)
+
+        raw_text = response.content if hasattr(response, "content") else str(response)
+
+        raw_documents = []
+
+        try:
+            out = json.loads(raw_text)
+            results = out.get("results", out) if isinstance(out, dict) else out
+            if not isinstance(results, list):
+                results = [results]
+        except json.JSONDecodeError:
+            logger.warning("Vision response was not valid JSON: %s", raw_text[:200])
+            results = []
+
+        for i, (path, _, _) in enumerate(images):
+            item = results[i] if i < len(results) else {}
+            txs = item.get("transactions", [])
+            confidence = item.get("confidence", 0.0)
+            # Format as markdown so normalize can re-extract
+            lines = [f"| date | amount | description |", "|------|--------|-------------|"]
+            for tx in txs:
+                lines.append(f"| {tx.get('date', '')} | {tx.get('amount', '')} | {tx.get('description', '')} |")
+            content = "\n".join(lines) if lines else ""
+            raw_documents.append(
+                RawDocument(
+                    source_file=path,
+                    file_type="image",
+                    content=content,
+                )
+            )
+
+        return {
+            "raw_documents": raw_documents
+        }
+
+    return ingest_images
 
 
 def make_normalize_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
@@ -450,3 +530,6 @@ def generate_report(state: ReconciliationState) -> dict[str, Any]:
     
     return {"report": report}
 
+def passthrough(state: ReconciliationState) -> dict[str, Any]:
+    """No state change; used for graph structure (fan-out / fan-in)."""
+    return {}
