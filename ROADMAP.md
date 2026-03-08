@@ -46,9 +46,11 @@ The core pipeline works but is not yet presentable. This version focuses on reli
 
 Real bank statements come as PDFs or scanned images. This version adds a document parsing layer before the existing pipeline, using vision models to extract structured transaction data from unstructured documents.
 
-**Planned:**
-- `parse_documents` node added before `ingest`, accepting image inputs and pdfs containing images
+**Delivered:**
+- `ingest_images` node added to run parallel to `ingest`, accepting image inputs
 - Vision API integration (Claude) for receipt and bank statement extraction
+
+**Planned:**
 - Confidence scoring per extracted transaction — low-confidence rows flagged for human review
 - Fallback handling for documents that cannot be parsed
 - Updated Streamlit UI to accept file uploads (PDF/PNG/JPG/XLSX)
