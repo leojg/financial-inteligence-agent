@@ -29,11 +29,27 @@ def _llm_content_str(content: Any) -> str:
         return content
     return json.dumps(content) if content is not None else "[]"
 
+def prepare_ingest(state: ReconciliationState) -> dict[str, Any]:
+    """Prepare the ingest state by loading source paths into a list of strings."""
+    source_paths = state["source_paths"]
+    source_files = []
+    exts = ["csv", "xlsx", "xls", "pdf", "jpg", "jpeg", "png"]
+    for path in source_paths:
+        p = Path(path)
+        if p.is_dir():
+            for ext in exts:
+                source_files.extend(str(f) for f in p.glob(f"*.{ext}"))
+        elif p.is_file():
+            source_files.append(path)
+    return {
+        "source_files": source_files
+    }
+
 
 def ingest(state: ReconciliationState) -> dict[str, Any]:
-    """Load documents from source_folder and return raw_documents."""
-    source_folder = state["source_folder"]
-    documents = load_documents(Path(source_folder))
+    """Load documents from source_files and return raw_documents."""
+    source_files = state["source_files"]
+    documents = load_documents(source_files)
 
     raw_documents = [
         RawDocument(
@@ -53,18 +69,18 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
     llm = ChatAnthropic(model=config.vision_model_name, max_tokens=config.vision_max_tokens)
 
     def ingest_images(state: ReconciliationState) -> dict[str, Any]:
-        source_folder = Path(state["source_folder"])
+        source_files = state["source_files"]
 
         images = []
 
-        for ext in ["png", "jpg", "jpeg"]:
-            for path in source_folder.rglob(f"*.{ext}"):
-                if not path.is_file():
-                    continue
-                data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
-                media_type = "image/png" if ext == "png" else "image/jpeg"
-                images.append((str(path), data, media_type))
-
+        img_ext = (".png", ".jpg", ".jpeg")
+        for path in source_files:
+            p = Path(path)
+            if not p.is_file() or p.suffix.lower() not in img_ext:
+                continue
+            data = base64.standard_b64encode(p.read_bytes()).decode("utf-8")
+            media_type = "image/png" if p.suffix.lower() == ".png" else "image/jpeg"
+            images.append((path, data, media_type))
         content = []
 
         for path, data, media_type in images:
@@ -531,5 +547,5 @@ def generate_report(state: ReconciliationState) -> dict[str, Any]:
     return {"report": report}
 
 def passthrough(state: ReconciliationState) -> dict[str, Any]:
-    """No state change; used for graph structure (fan-out / fan-in)."""
+    """No state change; used for graph structure."""
     return {}

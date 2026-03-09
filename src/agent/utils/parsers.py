@@ -4,61 +4,60 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
 
-def load_excel_documents(folder_path: Path) -> list[Document]:
-    """Load Excel files as LangChain Documents using pandas."""
+def load_excel_documents(paths: list[str]) -> list[Document]:
+    """Load Excel files (paths only) as LangChain Documents using pandas."""
     documents = []
-    excel_files = list(folder_path.glob("*.xlsx")) + list(folder_path.glob("*.xls"))
-    logger.info("Found %d Excel files in %s", len(excel_files), folder_path)
-
-    for file_path in excel_files:
+    for path in paths:
+        p = Path(path)
+        if p.suffix.lower() not in (".xlsx", ".xls"):
+            continue
         try:
-            logger.info("Loading Excel file: %s", file_path)
-            df = pd.read_excel(file_path)
+            logger.info("Loading Excel file: %s", p)
+            df = pd.read_excel(p)
             if df.empty:
-                logger.warning("Empty Excel file: %s", file_path)
+                logger.warning("Empty Excel file: %s", p)
                 continue
             content = df.to_markdown(index=False)
             doc = Document(
                 page_content=content,
                 metadata={
-                    "source": str(file_path),
-                    "filename": file_path.name,
+                    "source": str(p),
+                    "filename": p.name,
                     "row_count": len(df),
                     "columns": df.columns.tolist(),
                 },
             )
             documents.append(doc)
         except Exception as e:
-            logger.error("Failed to load %s: %s", file_path.name, e)
-            continue
-
+            logger.error("Failed to load %s: %s", p.name, e)
     logger.info("Successfully loaded %d Excel files", len(documents))
     return documents
 
 
-def load_documents(data_dir: Path) -> list[Document]:
-    """Load all PDF and Excel documents from the data directory."""
-    if not data_dir.is_dir():
-        raise FileNotFoundError(
-            f"Data directory not found: {data_dir}. Create it and add PDF/XLSX documents."
-        )
+def load_documents(paths: list[str]) -> list[Document]:
+    """Load PDF and Excel documents from a list of file paths."""
+    pdf_paths = []
+    xlsx_paths = []
+    for path in paths:
+        p = Path(path)
+        suffix = p.suffix.lower()
+        if suffix == ".pdf":
+            pdf_paths.append(str(p))
+        elif suffix in (".xlsx", ".xls"):
+            xlsx_paths.append(str(p))
 
-    pdf_loader = DirectoryLoader(
-        path=str(data_dir),
-        glob="**/*.pdf",
-        loader_cls=PyPDFLoader,  # type: ignore[arg-type]
-    )
-    pdf_docs = pdf_loader.load()
-    excel_docs = load_excel_documents(data_dir)
-    documents = pdf_docs + excel_docs
+    documents = []
+    for path in pdf_paths:
+        documents.extend(PyPDFLoader(path).load())
+    documents.extend(load_excel_documents(xlsx_paths))
 
     if not documents:
         raise FileNotFoundError(
-            f"No documents found in {data_dir}. Add PDF or Excel files to run the analyzer."
+            "No documents found in the given paths. Add PDF or Excel files to run the analyzer."
         )
     return documents

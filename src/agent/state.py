@@ -42,9 +42,10 @@ def merge_raw_documents(old: list[Any], new: list[Any]) -> list[Any]:
     return (old or []) + (new or [])
 
 class ReconciliationState(TypedDict):
-    """Graph state: source_folder, raw_documents, transactions, duplicates, suspicious, report."""
+    """Graph state: source_paths, source_files, raw_documents, transactions, duplicates, suspicious, report."""
 
-    source_folder: str
+    source_paths: list[str]
+    source_files: list[str]
     raw_documents: Annotated[list[RawDocument], merge_raw_documents]
     transactions: Annotated[list[Transaction], keep_last]
     duplicates: list[Transaction]
@@ -53,10 +54,11 @@ class ReconciliationState(TypedDict):
     report: str | None
 
 
-def initial_state(source_folder: str) -> ReconciliationState:
+def initial_state(source_paths: list[str]) -> ReconciliationState:
     """Return initial graph state for the given source_folder."""
     return {
-        "source_folder": source_folder,
+        "source_paths": source_paths,
+        "source_files": [],
         "raw_documents": [],
         "transactions": [],
         "duplicates": [],
