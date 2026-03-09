@@ -5,5 +5,11 @@
     "agent": "./src/agent/graph.py:graph"
   },
   "env": ".env",
-  "image_distro": "wolfi"
+  "image_distro": "wolfi",
+  "serde": {
+    "allowed_msgpack_modules": [
+      ["agent.state", "RawDocument"],
+      ["agent.state", "Transaction"]
+    ]
+  }
 }

@@ -49,11 +49,11 @@ Real bank statements come as PDFs or scanned images. This version adds a documen
 **Delivered:**
 - `ingest_images` node added to run parallel to `ingest`, accepting image inputs
 - Vision API integration (Claude) for receipt and bank statement extraction
+- Updated Streamlit UI to accept file uploads (PDF/PNG/JPG/XLSX)
 
 **Planned:**
 - Confidence scoring per extracted transaction — low-confidence rows flagged for human review
 - Fallback handling for documents that cannot be parsed
-- Updated Streamlit UI to accept file uploads (PDF/PNG/JPG/XLSX)
 - Expanded synthetic dataset with realistic statements in image and pdf formats
 
 ---

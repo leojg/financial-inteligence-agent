@@ -50,13 +50,25 @@ git clone https://github.com/leojg/finance-intelligence-agent.git
 cd finance-intelligence-agent
 ```
 
-**2. Install dependencies**
+**2. Create virtual enviroment and activate it**
 
 ```bash
-pip install -e ".[dev]"
+python -m venv venv
+source venv/bin/activate
 ```
 
-**3. Configure environment**
+
+
+**3. Install dependencies**
+
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
+
+The editable install (`pip install -e .`) makes the `agent` package importable so the Streamlit app and `langgraph dev` can find it.
+
+**4. Configure environment**
 
 ```bash
 cp .env.example .env
@@ -71,7 +83,7 @@ LANGSMITH_API_KEY=...           # optional, for tracing
 LANGSMITH_PROJECT=finance-intelligence-agent
 ```
 
-**4. Prepare your statements**
+**5. Prepare your statements**
 
 Create a folder and drop your bank statements into it (PDF or XLSX):
 

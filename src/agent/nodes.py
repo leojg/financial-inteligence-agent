@@ -30,17 +30,27 @@ def _llm_content_str(content: Any) -> str:
     return json.dumps(content) if content is not None else "[]"
 
 def prepare_ingest(state: ReconciliationState) -> dict[str, Any]:
-    """Prepare the ingest state by loading source paths into a list of strings."""
-    source_paths = state["source_paths"]
-    source_files = []
+    """Expand source_paths (folders + files) into a deduplicated list of file paths."""
+    source_paths = state.get("source_paths") or []
+    seen: set[str] = set()
+    source_files: list[str] = []
     exts = ["csv", "xlsx", "xls", "pdf", "jpg", "jpeg", "png"]
     for path in source_paths:
         p = Path(path)
         if p.is_dir():
             for ext in exts:
-                source_files.extend(str(f) for f in p.glob(f"*.{ext}"))
+                for f in p.glob(f"*.{ext}"):
+                    if not f.is_file():
+                        continue
+                    key = str(f.resolve())
+                    if key not in seen:
+                        seen.add(key)
+                        source_files.append(key)
         elif p.is_file():
-            source_files.append(path)
+            key = str(p.resolve())
+            if key not in seen:
+                seen.add(key)
+                source_files.append(key)
     return {
         "source_files": source_files
     }
@@ -191,6 +201,7 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
                 raw_json = json.loads(_llm_content_str(response.content))
                 for t in raw_json:
                     t["id"] = str(uuid.uuid4())
+                    t.setdefault("source_file", doc.source_file)
                     transactions.append(Transaction(**t))
                 conn.execute(
                     "INSERT OR REPLACE INTO normalized_document_cache (source_file, content_hash, transactions_json) VALUES (?, ?, ?)",

@@ -8,7 +8,6 @@ from pathlib import Path
 from langgraph.graph import END, START, StateGraph
 
 from agent.configuration import DEFAULT_CONFIG, ReconciliationConfig
-from agent.db import get_checkpointer
 from agent.nodes import (
     generate_report,
     human_review,
@@ -103,4 +102,4 @@ def make_graph(
         interrupt_before=["human_review"]
     )
 
-graph = make_graph(checkpointer=get_checkpointer())
+graph = make_graph(checkpointer=None)

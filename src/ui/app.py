@@ -1,15 +1,19 @@
 """Streamlit UI for the Financial Reconciliation Agent.
 
 Run with: streamlit run src/ui/app.py
+
+Requires the project to be installed (pip install -e .) so the agent package is importable.
 """
 
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from pathlib import Path  # noqa: E402
+# noqa: E402 for imports below
 
 import pandas as pd  # noqa: E402  # type: ignore
 import streamlit as st  # noqa: E402
@@ -53,10 +57,48 @@ def _init_session() -> None:
         "thread_id": "reconciliation-1",
         "interrupted": False,      # waiting at human_review node
         "review_decisions": {},    # {transaction_id: "confirmed" | "rejected"}
+        "source_paths": [],        # list of paths (temp paths for uploads or user paths)
+        "upload_dir": None,        # temp dir for uploaded files (created on first upload)
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
+
+def _ensure_upload_dir() -> Path:
+    """Create and return a session-scoped temp dir for uploaded files."""
+    if st.session_state.upload_dir is None:
+        st.session_state.upload_dir = Path(tempfile.mkdtemp(prefix="finance_agent_uploads_"))
+    return Path(st.session_state.upload_dir)
+
+
+def _process_uploads(uploaded_files: list) -> list[str]:
+    """Save uploaded files to temp dir and return their paths. Dedupe by name."""
+    if not uploaded_files:
+        return []
+    upload_dir = _ensure_upload_dir()
+    # Names already in source_paths under our upload dir (use resolve() for consistent comparison)
+    try:
+        upload_dir_resolved = upload_dir.resolve()
+        existing_names = {
+            Path(p).name for p in st.session_state.source_paths
+            if Path(p).resolve().parent == upload_dir_resolved
+        }
+    except Exception:
+        existing_names = set()
+    new_paths: list[str] = []
+    for f in uploaded_files:
+        name = f.name or "unnamed"
+        if name in existing_names:
+            continue
+        path = upload_dir / name
+        try:
+            path.write_bytes(f.getvalue())
+        except Exception:
+            continue
+        new_paths.append(str(path.resolve()))
+        existing_names.add(name)
+    return new_paths
 
 
 def _get_graph() -> Any:
@@ -107,15 +149,57 @@ def render_sidebar() -> None:
         st.markdown("---")
 
         st.subheader("Input")
-        folder = st.text_input(
-            "Statements folder",
-            placeholder="/path/to/bank/statements",
-            help="Folder containing PDF and XLSX bank statements"
+        uploaded = st.file_uploader(
+            "Drop files here or browse",
+            type=["pdf", "xlsx", "xls", "csv", "png", "jpg", "jpeg"],
+            accept_multiple_files=True,
+            help="Upload PDF, Excel, CSV, or image files. Drag and drop or click to open the file picker. For a folder, select multiple files from it at once.",
         )
+        if uploaded:
+            new_paths = _process_uploads(uploaded)
+            if new_paths:
+                existing = set(st.session_state.source_paths)
+                added = [p for p in new_paths if p not in existing]
+                if added:
+                    st.session_state.source_paths = st.session_state.source_paths + added
+                # Don't rerun here: same run will see updated source_paths and enable the button
 
-        run_disabled = not folder or st.session_state.interrupted
+        with st.expander("Add folder path (local only)"):
+            path_input = st.text_input(
+                "Folder or file path",
+                placeholder="/path/to/folder or /path/to/file.pdf",
+                key="path_input",
+                label_visibility="collapsed",
+            )
+            if st.button("➕ Add path", key="add_path_btn"):
+                p = (path_input or "").strip()
+                if p and p not in st.session_state.source_paths:
+                    st.session_state.source_paths = st.session_state.source_paths + [p]
+                    st.rerun()
+                elif p and p in st.session_state.source_paths:
+                    st.warning("Already in the list.")
+
+        st.subheader("Sources")
+        if not st.session_state.source_paths:
+            st.caption("No files yet. Drop files above or use the file picker.")
+        else:
+            upload_dir = Path(st.session_state.upload_dir) if st.session_state.upload_dir else None
+            for i, path in enumerate(st.session_state.source_paths):
+                col_path, col_rm = st.columns([1, 0.15])
+                with col_path:
+                    p = Path(path)
+                    label = p.name if (upload_dir and p.parent == upload_dir) else path
+                    st.text(label)
+                with col_rm:
+                    if st.button("🗑", key=f"remove_{i}", help="Remove"):
+                        st.session_state.source_paths = [
+                            x for j, x in enumerate(st.session_state.source_paths) if j != i
+                        ]
+                        st.rerun()
+
+        run_disabled = not st.session_state.source_paths or st.session_state.interrupted
         if st.button("▶ Run Agent", disabled=run_disabled, use_container_width=True, type="primary"):
-            _run_graph(folder.strip())
+            _run_graph(st.session_state.source_paths)
 
         if st.session_state.interrupted:
             st.info("⏸ Waiting for your review.\nConfirm or reject items in the Review tab, then click Resume.")
@@ -142,9 +226,9 @@ def render_sidebar() -> None:
 # ── Graph execution ──────────────────────────────────────────────────────────
 
 
-def _run_graph(source_folder: str) -> None:
-    if not Path(source_folder).is_dir():
-        st.error(f"Folder not found: {source_folder}")
+def _run_graph(source_paths: list[str]) -> None:
+    if not source_paths:
+        st.error("Add at least one folder or file.")
         return
 
     from agent.state import initial_state
@@ -154,15 +238,16 @@ def _run_graph(source_folder: str) -> None:
 
     with st.spinner("Running reconciliation agent…"):
         try:
-            result = graph.invoke(initial_state(source_folder), config=config)
-            st.session_state.graph_state = result
+            graph.invoke(initial_state(source_paths), config=config)
 
-            # Check if interrupted at human_review
+            # Use checkpoint state for UI (invoke return value may differ when interrupted)
             snapshot = graph.get_state(config)
-            if snapshot.next and "human_review" in snapshot.next:
-                st.session_state.interrupted = True
-            else:
-                st.session_state.interrupted = False
+            state_values = getattr(snapshot, "values", None)
+            st.session_state.graph_state = dict(state_values) if state_values is not None else {}
+
+            # Detect interrupt: next node is human_review (snapshot.next can be tuple or list)
+            next_nodes = getattr(snapshot, "next", None) or ()
+            st.session_state.interrupted = "human_review" in next_nodes
 
             st.rerun()
         except Exception as e:
@@ -189,8 +274,10 @@ def _resume_graph() -> None:
 
     with st.spinner("Resuming agent…"):
         try:
-            result = graph.invoke(None, config=config)
-            st.session_state.graph_state = result
+            graph.invoke(None, config=config)
+            snapshot = graph.get_state(config)
+            state_values = getattr(snapshot, "values", None)
+            st.session_state.graph_state = dict(state_values) if state_values is not None else {}
             st.session_state.interrupted = False
             st.session_state.review_decisions = {}
             st.rerun()
@@ -207,7 +294,7 @@ def render_main() -> None:
 
     if state is None:
         st.markdown("## Financial Reconciliation Agent")
-        st.markdown("Enter a folder path in the sidebar and click **Run Agent** to start.")
+        st.markdown("Drop files or use the file picker in the sidebar, then click **Run Agent** to start.")
         return
 
     tab_txn, tab_dup, tab_sus, tab_review, tab_report = st.tabs([
@@ -298,16 +385,25 @@ def render_main() -> None:
                 t for t in transactions
                 if (t if isinstance(t, dict) else t.model_dump()).get("needs_review")
             ]
+            # Deduplicate by id so each transaction has exactly one checkbox (avoids duplicate key)
+            seen_ids: set[str] = set()
+            unique_needs_review: list[Any] = []
+            for t in needs_review:
+                d = t if isinstance(t, dict) else t.model_dump()
+                tid = d.get("id", "")
+                if tid and tid not in seen_ids:
+                    seen_ids.add(tid)
+                    unique_needs_review.append(t)
 
-            if not needs_review:
+            if not unique_needs_review:
                 st.success("Nothing requires review.")
             else:
-                st.markdown(f"**{len(needs_review)} transactions need your review.** Check the ones you want to confirm, leave unchecked to reject.")
+                st.markdown(f"**{len(unique_needs_review)} transactions need your review.** Check the ones you want to confirm, leave unchecked to reject.")
                 st.markdown("---")
 
                 decisions = st.session_state.review_decisions.copy()
 
-                for t in needs_review:
+                for i, t in enumerate(unique_needs_review):
                     d = t if isinstance(t, dict) else t.model_dump()
                     tid = d.get("id", "")
                     label = f"{d.get('date')} · {d.get('merchant')} · {d.get('amount_original')} {d.get('currency')} · {d.get('account')}"
@@ -317,7 +413,7 @@ def render_main() -> None:
                     with col1:
                         checked = st.checkbox(
                             "Confirm",
-                            key=f"review_{tid}",
+                            key=f"review_{i}_{tid}",
                             value=decisions.get(tid) == "confirmed",
                             label_visibility="hidden"
                         )
