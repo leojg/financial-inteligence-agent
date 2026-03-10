@@ -12,8 +12,8 @@ from typing import Any, Callable
 from langchain_openai import ChatOpenAI
 
 from agent.configuration import ReconciliationConfig
-from agent.db import get_connection
 from agent.services.exchange_service import ExchangeService
+from agent.services.database_service import DatabaseService
 from agent.state import RawDocument, ReconciliationState, Transaction
 from agent.utils.parsers import load_documents
 from langchain_anthropic import ChatAnthropic
@@ -175,21 +175,15 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
 
     def normalize(state: ReconciliationState) -> dict[str, Any]:
         transactions = []
-        conn = get_connection()
+        database_service = DatabaseService()
 
         for doc in state["raw_documents"]:
             if isinstance(doc, dict):
                 doc = RawDocument(**doc)
 
             content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
-            cur = conn.execute(
-                "SELECT transactions_json FROM normalized_document_cache WHERE content_hash = ?",
-                (content_hash,),
-            )
-            row = cur.fetchone()
-            cur.close()
-            if row is not None:
-                cached = json.loads(str(row[0]))
+            cached = database_service.get_cached_transactions(content_hash)
+            if cached is not None:
                 for t in cached:
                     t.setdefault("confidence", getattr(doc, "confidence", None))
                     t.setdefault("source_file", doc.source_file)
@@ -223,11 +217,11 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
                     t.setdefault("source_file", doc.source_file)
                     t.setdefault("confidence", getattr(doc, "confidence", None))
                     transactions.append(Transaction(**t))
-                conn.execute(
-                    "INSERT OR REPLACE INTO normalized_document_cache (content_hash, source_file, transactions_json) VALUES (?, ?, ?)",
-                    (content_hash, doc.source_file, json.dumps([x.model_dump() for x in transactions[-len(raw_json):]])),
+                database_service.save_normalized_document(
+                    content_hash,
+                    doc.source_file,
+                    json.dumps([x.model_dump() for x in transactions[-len(raw_json):]]),
                 )
-                conn.commit()
             except json.JSONDecodeError as e:
                 logger.warning("Failed to parse LLM response for %s: %s", doc.source_file, e)
                 continue
@@ -290,7 +284,7 @@ def make_review_low_confidence_transactions_node(
         # Update normalized_document_cache for affected source_files (dismissed or edited)
         source_files_to_update = {t.source_file for t in low_conf}
         raw_docs = state.get("raw_documents") or []
-        conn = get_connection()
+        database_service = DatabaseService()
         for doc in raw_docs:
             if isinstance(doc, dict):
                 doc = RawDocument(**doc)
@@ -298,12 +292,11 @@ def make_review_low_confidence_transactions_node(
                 continue
             content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
             transactions_for_doc = [t for t in new_txns if t.source_file == doc.source_file]
-            conn.execute(
-                "INSERT OR REPLACE INTO normalized_document_cache (content_hash, source_file, transactions_json) VALUES (?, ?, ?)",
-                (content_hash, doc.source_file, json.dumps([t.model_dump() for t in transactions_for_doc])),
+            database_service.save_normalized_document(
+                content_hash,
+                doc.source_file,
+                json.dumps([t.model_dump() for t in transactions_for_doc]),
             )
-        if source_files_to_update:
-            conn.commit()
 
         return {
             "transactions": new_txns,
@@ -362,7 +355,7 @@ def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[Reconc
 
 
 def make_categorize_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
-    """Return a categorize node that assigns categories and sets needs_review."""
+    """Return a categorize node that checks merchant_categories cache before calling the LLM."""
     llm = ChatOpenAI(
         model=config.model_name,
         temperature=config.temperature,
@@ -377,54 +370,86 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
         transactions = [
             Transaction(**t) if isinstance(t, dict) else t for t in state["transactions"]
         ]
-
-        updated = []
+        database_service = DatabaseService()
+        updated: list[Transaction] = []
 
         for batch in _chunk(transactions, 50):
-            transaction_list = "\n".join([
-                f"{t.id} | {t.merchant} | {t.amount_original} {t.currency}"
-                for t in batch
-            ])
+            cache_hits: dict[str, str] = {}
+            llm_needed: list[Transaction] = []
 
-            prompt = f"""
-                Categorize each transaction using ONLY the categories listed below.
-                If you cannot confidently categorize a transaction, set category to null.
+            for t in batch:
+                m_norm = database_service.normalize_merchant(t.merchant)
+                cached_cat = database_service.get_merchant_category(m_norm)
+                if cached_cat is not None:
+                    cache_hits[t.id] = cached_cat
+                else:
+                    llm_needed.append(t)
 
-                Categories: {", ".join(config.categories)}
+            logger.info(
+                "categorize: %d cache hits, %d LLM calls needed in this batch",
+                len(cache_hits), len(llm_needed),
+            )
 
-                Transactions (id | merchant | amount currency):
-                {transaction_list}
+            llm_results: dict[str, str | None] = {}
+            if llm_needed:
+                transaction_list = "\n".join([
+                    f"{t.id} | {t.merchant} | {t.amount_original} {t.currency}"
+                    for t in llm_needed
+                ])
 
-                Return ONLY a JSON array, no preamble, no markdown:
-                [{{"id": "transaction-id", "category": "Category or null"}}]
-            """
+                prompt = f"""
+                    Categorize each transaction using ONLY the categories listed below.
+                    If you cannot confidently categorize a transaction, set category to null.
 
-            try:
-                response = llm.invoke(prompt)
-                raw_json = json.loads(_llm_content_str(response.content))
-                category_map = {item["id"]: item["category"] for item in raw_json}
+                    Categories: {", ".join(config.categories)}
 
-                for t in batch:
-                    category = category_map.get(t.id)
-                    if category is None or category == "null":
-                        t = t.model_copy(
-                            update={
-                                "needs_review": True,
-                                "review_reason": "Could not confidently categorize transaction"
-                            }
-                        )
-                    else:
-                        t = t.model_copy(update={"category": category})
-                    updated.append(t)
-                
-            except json.JSONDecodeError as e:
-                logger.warning("Failed to parse categorization response: %s", e)
-                # Mark all as needs_review if batch fails
-                for t in batch:
+                    Transactions (id | merchant | amount currency):
+                    {transaction_list}
+
+                    Return ONLY a JSON array, no preamble, no markdown:
+                    [{{"id": "transaction-id", "category": "Category or null"}}]
+                """
+
+                try:
+                    response = llm.invoke(prompt)
+                    raw_json = json.loads(_llm_content_str(response.content))
+                    llm_results = {item["id"]: item["category"] for item in raw_json}
+
+                    # Write new mappings to merchant_categories cache
+                    for t in llm_needed:
+                        cat = llm_results.get(t.id)
+                        if cat and cat != "null":
+                            database_service.upsert_merchant_category(
+                                database_service.normalize_merchant(t.merchant), cat
+                            )
+
+                except json.JSONDecodeError as e:
+                    logger.warning("Failed to parse categorization response: %s", e)
+                    # Mark all LLM-needed as needs_review
+                    for t in llm_needed:
+                        updated.append(t.model_copy(update={
+                            "needs_review": True,
+                            "review_reason": "Categorization batch failed",
+                        }))
+                    # Still apply cache hits for the rest of the batch
+                    for t in batch:
+                        if t.id in cache_hits:
+                            updated.append(t.model_copy(update={"category": cache_hits[t.id]}))
+                    continue
+
+            for t in batch:
+                if t.id in cache_hits:
+                    updated.append(t.model_copy(update={"category": cache_hits[t.id]}))
+                    continue
+
+                category = llm_results.get(t.id)
+                if category is None or category == "null":
                     updated.append(t.model_copy(update={
                         "needs_review": True,
-                        "review_reason": "Categorization batch failed"
+                        "review_reason": "Could not confidently categorize transaction",
                     }))
+                else:
+                    updated.append(t.model_copy(update={"category": category}))
 
         return {"transactions": updated}
 
@@ -432,7 +457,7 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
 
 
 def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
-    """Return a detect_duplicates node that marks duplicate transactions."""
+    """Return a detect_duplicates node; checks duplicate_pairs cache before LLM for fuzzy matches."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
 
     def _dates_within(date_a: str, date_b: str, days: int) -> bool:
@@ -445,8 +470,19 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
             return False
         return abs(amount_a - amount_b) / abs(amount_a) <= tolerance
 
-    def _check_duplicate_with_llm(t_a: Transaction, t_b: Transaction) -> tuple[bool, bool, str]:
-        """Return (is_duplicate, needs_review, reason) using the LLM."""
+    def _check_duplicate_with_llm(
+        database_service: DatabaseService,
+        t_a: Transaction,
+        t_b: Transaction,
+        fp_a: str,
+        fp_b: str,
+    ) -> tuple[bool, bool, str]:
+        """Check duplicate_pairs cache first; fall back to LLM. Return (is_duplicate, needs_review, reason)."""
+        cached = database_service.get_duplicate_pair(fp_a, fp_b)
+        if cached is not None:
+            logger.debug("duplicate_pairs cache hit: %s / %s", fp_a[:8], fp_b[:8])
+            return cached["is_duplicate"], False, cached["reason"]
+
         prompt = f"""
         Are these two transactions likely the same transaction appearing in two different bank statements?
         Transaction A: {t_a.date} | {t_a.merchant} | {t_a.amount_original} {t_a.currency} | {t_a.account}
@@ -462,6 +498,8 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
             is_duplicate = result["is_duplicate"]
             confidence = result["confidence"]
             reason = result.get("reason") or ""
+
+            database_service.upsert_duplicate_pair(fp_a, fp_b, is_duplicate, reason)
 
             if is_duplicate:
                 return True, False, reason
@@ -479,57 +517,60 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
             Transaction(**t) if isinstance(t, dict) else t
             for t in state["transactions"]
         ]
-
-        # Sort transactions by date ascending
+        database_service = DatabaseService()
         transactions.sort(key=lambda t: t.date)
 
-        matched_ids = set()
-        duplicates = []
+        matched_ids: set[str] = set()
+        duplicates: list[Transaction] = []
         updated = {t.id: t for t in transactions}
 
         for i, t_a in enumerate(transactions):
             if t_a.id in matched_ids:
                 continue
-                
-            for t_b in transactions[i+1:]:
 
+            fp_a = database_service.transaction_fingerprint(
+                t_a.date, t_a.amount_original, t_a.currency, t_a.merchant
+            )
+
+            for t_b in transactions[i + 1:]:
                 if t_a.currency != t_b.currency:
                     continue
-
                 if t_b.id in matched_ids:
                     continue
-
                 if not _dates_within(t_a.date, t_b.date, days=3):
                     continue
 
+                fp_b = database_service.transaction_fingerprint(
+                    t_b.date, t_b.amount_original, t_b.currency, t_b.merchant
+                )
+
                 if t_a.amount_original == t_b.amount_original:
-                    updated[t_b.id] = t_b.model_copy(
-                        update={"duplicate_of": t_a.id}
+                    # Exact match — no LLM needed; persist to duplicate_pairs for future runs
+                    database_service.upsert_duplicate_pair(
+                        fp_a, fp_b, True, "exact amount and date match"
                     )
-                    matched_ids.add(t_a.id)
-                    matched_ids.add(t_b.id)
+                    updated[t_b.id] = t_b.model_copy(update={"duplicate_of": t_a.id})
+                    matched_ids.update([t_a.id, t_b.id])
                     duplicates.extend([updated[t_a.id], updated[t_b.id]])
 
                 elif _amounts_fuzzy_match(t_a.amount_original, t_b.amount_original):
-                    is_duplicate, needs_review, reason = _check_duplicate_with_llm(t_a, t_b)
-
+                    is_duplicate, needs_review, reason = _check_duplicate_with_llm(
+                        database_service, t_a, t_b, fp_a, fp_b
+                    )
                     if is_duplicate:
-                        updated[t_b.id] = t_b.model_copy(
-                            update={"duplicate_of": t_a.id}
-                        )
-                        matched_ids.add(t_a.id)
-                        matched_ids.add(t_b.id)
+                        updated[t_b.id] = t_b.model_copy(update={"duplicate_of": t_a.id})
+                        matched_ids.update([t_a.id, t_b.id])
                         duplicates.extend([updated[t_a.id], updated[t_b.id]])
                     elif needs_review:
                         updated[t_b.id] = t_b.model_copy(
                             update={"needs_review": True, "review_reason": reason}
                         )
-                
+
         return {
             "transactions": list(updated.values()),
-            "duplicates": duplicates
+            "duplicates": duplicates,
         }
-        
+
     return detect_duplicates
 
 
@@ -550,7 +591,6 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
             Transaction(**t) if isinstance(t, dict) else t
             for t in state["transactions"]
         ]
-
         suspicious_map: dict[str, str] = {}
 
         for batch in _chunk(transactions, 50):
@@ -564,15 +604,15 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
             Only flag transactions that clearly warrant human review. When in doubt, do not flag.
 
             Consider:
-            - Amounts that are clearly out of line(e.g. duplicate charge or 10x what you would expect for that category), not just the largest in the list
+            - Amounts that are clearly out of line (e.g. duplicate charge or 10x what you would expect for that category), not just the largest in the list
             - Same merchant charged multiple times on the same day (possible duplicate charge)
             - Recurring payments that changed amount significantly
             - Unexpected foreign currency charges
-            - Other clear inconsistencies: e.g. dupplicate charge for the same service, amounts that suggest a billing error or unauthorized use.
-            
-            Do not flag: income(salary, freelance, other income, transfer credits), routine subscriptions(Netflix, Spotify, etc.), normal grocery/dining/transportation spending, utility bills, transfers between user's own accounts.
+            - Other clear inconsistencies: e.g. duplicate charge for the same service, amounts that suggest a billing error or unauthorized use.
+
+            Do not flag: income (salary, freelance, other income, transfer credits), routine subscriptions (Netflix, Spotify, etc.), normal grocery/dining/transportation spending, utility bills, transfers between user's own accounts.
             Do not flag income for being high or variable. Lump-sum and variable income are normal.
-            Do not flag large routine charges such as rent or utilities
+            Do not flag large routine charges such as rent or utilities.
 
             Transactions (id | date | merchant | amount currency | account | category):
             {transaction_list}
@@ -598,10 +638,7 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
                 suspicious.append(t)
             updated.append(t)
 
-        return {
-            "transactions": updated,
-            "suspicious": suspicious
-        }
+        return {"transactions": updated, "suspicious": suspicious}
 
     return flag_suspicious
 
@@ -645,6 +682,44 @@ def generate_report(state: ReconciliationState) -> dict[str, Any]:
     By category: {by_category}
     """
     
+    run_id = state.get("run_id")
+    if run_id:
+        database_service = DatabaseService()
+        rows = [
+            {
+                "id": t.id,
+                "run_id": run_id,
+                "fingerprint": database_service.transaction_fingerprint(
+                    t.date, t.amount_original, t.currency, t.merchant
+                ),
+                "date": t.date,
+                "amount_original": t.amount_original,
+                "amount_base": t.amount_base,
+                "currency": t.currency,
+                "merchant": t.merchant,
+                "merchant_normalized": database_service.normalize_merchant(t.merchant),
+                "account": t.account,
+                "source_file": t.source_file,
+                "category": t.category,
+                "duplicate_of": t.duplicate_of,
+                "suspicious": int(t.suspicious),
+                "suspicious_reason": t.suspicious_reason,
+                "needs_review": int(t.needs_review),
+                "review_reason": t.review_reason,
+                "review_status": t.review_status,
+                "confidence": t.confidence,
+            }
+            for t in transactions
+        ]
+        database_service.upsert_transactions(rows)
+        database_service.update_run(
+            run_id,
+            status="complete",
+            total_transactions=total,
+            total_duplicates=duplicates,
+            total_suspicious=suspicious,
+        )
+
     return {"report": report}
 
 def passthrough(state: ReconciliationState) -> dict[str, Any]:

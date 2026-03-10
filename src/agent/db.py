@@ -59,6 +59,61 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             source_file TEXT NOT NULL,
             transactions_json TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS runs_history (
+            run_id TEXT PRIMARY KEY,
+            thread_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            completed_at TEXT,
+            source_paths TEXT NOT NULL,
+            status TEXT NOT NULL,
+            total_transactions INTEGER DEFAULT 0,
+            total_duplicates INTEGER DEFAULT 0,
+            total_suspicious INTEGER DEFAULT 0,
+            base_currency TEXT NOT NULL DEFAULT 'USD'
+        );
+
+        CREATE TABLE IF NOT EXISTS transactions (
+            id TEXT PRIMARY KEY,
+            run_id TEXT NOT NULL,
+            fingerprint TEXT NOT NULL,
+            date TEXT NOT NULL,
+            amount_original REAL NOT NULL,
+            amount_base REAL,
+            currency TEXT NOT NULL,
+            merchant TEXT NOT NULL,
+            merchant_normalized TEXT NOT NULL,
+            account TEXT NOT NULL,
+            source_file TEXT NOT NULL,
+            category TEXT,
+            duplicate_of TEXT,
+            suspicious INTEGER NOT NULL DEFAULT 0,
+            suspicious_reason TEXT,
+            needs_review INTEGER NOT NULL DEFAULT 0,
+            review_reason TEXT,
+            review_status TEXT,
+            confidence REAL,
+            FOREIGN KEY (run_id) REFERENCES runs_history(run_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_transactions_run_id
+            ON transactions(run_id);
+        CREATE INDEX IF NOT EXISTS idx_transactions_fingerprint
+            ON transactions(fingerprint);
+
+        CREATE TABLE IF NOT EXISTS merchant_categories (
+            merchant_normalized TEXT PRIMARY KEY,
+            category TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'llm',
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS duplicate_pairs (
+            fingerprint_a TEXT NOT NULL,
+            fingerprint_b TEXT NOT NULL,
+            is_duplicate INTEGER NOT NULL,
+            reason TEXT,
+            PRIMARY KEY (fingerprint_a, fingerprint_b)
+        );
     """)
     conn.commit()
 
