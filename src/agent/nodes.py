@@ -65,7 +65,8 @@ def ingest(state: ReconciliationState) -> dict[str, Any]:
         RawDocument(
             source_file=doc.metadata["source"],
             file_type="xlsx" if doc.metadata["source"].endswith((".xlsx", ".xls")) else "pdf",
-            content=doc.page_content
+            content=doc.page_content,
+            confidence=1.0
         )
         for doc in documents
     ]
@@ -116,16 +117,30 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
         response = llm.invoke(messages)
 
         raw_text = response.content if hasattr(response, "content") else str(response)
+        if not isinstance(raw_text, str):
+            raw_text = str(raw_text)
+
+        # Strip markdown code block if present
+        text = raw_text.strip()
+        if text.startswith("```"):
+            first = text.find("\n")
+            if first != -1:
+                text = text[first + 1 : text.rfind("```")].strip()
+            else:
+                text = text.replace("```", "").strip()
 
         raw_documents = []
 
         try:
-            out = json.loads(raw_text)
+            out = json.loads(text)
             results = out.get("results", out) if isinstance(out, dict) else out
             if not isinstance(results, list):
                 results = [results]
-        except json.JSONDecodeError:
-            logger.warning("Vision response was not valid JSON: %s", raw_text[:200])
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "Vision response was not valid JSON (error at pos %s): %s ... [tail] %s",
+                e.pos, raw_text[:200], text[-300:] if len(text) > 300 else text,
+            )
             results = []
 
         for i, (path, _, _) in enumerate(images):
@@ -137,11 +152,13 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
             for tx in txs:
                 lines.append(f"| {tx.get('date', '')} | {tx.get('amount', '')} | {tx.get('description', '')} |")
             content = "\n".join(lines) if lines else ""
+            confidence = item.get("confidence", 0.0)
             raw_documents.append(
                 RawDocument(
                     source_file=path,
                     file_type="image",
                     content=content,
+                    confidence=confidence,
                 )
             )
 
@@ -166,16 +183,18 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
 
             content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
             cur = conn.execute(
-                "SELECT transactions_json FROM normalized_document_cache WHERE source_file = ? AND content_hash = ?",
-                (doc.source_file, content_hash),
+                "SELECT transactions_json FROM normalized_document_cache WHERE content_hash = ?",
+                (content_hash,),
             )
             row = cur.fetchone()
             cur.close()
             if row is not None:
                 cached = json.loads(str(row[0]))
                 for t in cached:
+                    t.setdefault("confidence", getattr(doc, "confidence", None))
+                    t.setdefault("source_file", doc.source_file)
                     transactions.append(Transaction(**t))
-                continue # Transaction already present in the cache
+                continue
 
             prompt = f"""
                 Extract all transactions from the following bank statement.
@@ -202,10 +221,11 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
                 for t in raw_json:
                     t["id"] = str(uuid.uuid4())
                     t.setdefault("source_file", doc.source_file)
+                    t.setdefault("confidence", getattr(doc, "confidence", None))
                     transactions.append(Transaction(**t))
                 conn.execute(
-                    "INSERT OR REPLACE INTO normalized_document_cache (source_file, content_hash, transactions_json) VALUES (?, ?, ?)",
-                    (doc.source_file, content_hash, json.dumps([x.model_dump() for x in transactions[-len(raw_json):]])),
+                    "INSERT OR REPLACE INTO normalized_document_cache (content_hash, source_file, transactions_json) VALUES (?, ?, ?)",
+                    (content_hash, doc.source_file, json.dumps([x.model_dump() for x in transactions[-len(raw_json):]])),
                 )
                 conn.commit()
             except json.JSONDecodeError as e:
@@ -220,6 +240,76 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
         }
 
     return normalize
+
+
+def make_review_low_confidence_transactions_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a node that applies user decisions for low-confidence transactions (runs after interrupt)."""
+
+    threshold = config.image_low_confidence_threshold
+
+    def review_low_confidence_transactions(state: ReconciliationState) -> dict[str, Any]:
+        transactions = [
+            Transaction(**t) if isinstance(t, dict) else t
+            for t in state["transactions"]
+        ]
+        low_conf = [
+            t for t in transactions
+            if t.confidence is not None and t.confidence < threshold
+        ]
+        if not low_conf:
+            return {}
+
+        decisions = state.get("low_confidence_decisions") or []
+        if not decisions:
+            return {}
+
+        decisions_by_id = {
+            d["id"]: d for d in decisions
+            if isinstance(d, dict) and d.get("id") is not None
+        }
+        low_conf_ids = {t.id for t in low_conf}
+        new_txns: list[Transaction] = []
+        for t in transactions:
+            if t.id not in low_conf_ids:
+                new_txns.append(t)
+                continue
+            d = decisions_by_id.get(t.id)
+            if d is None:
+                new_txns.append(t)
+                continue
+            action = d.get("action", "approve")
+            if action == "dismiss":
+                continue
+            if action == "edit" and "transaction" in d:
+                new_txns.append(Transaction(**d["transaction"]))
+            else:
+                new_txns.append(t)
+
+        # Update normalized_document_cache for affected source_files (dismissed or edited)
+        source_files_to_update = {t.source_file for t in low_conf}
+        raw_docs = state.get("raw_documents") or []
+        conn = get_connection()
+        for doc in raw_docs:
+            if isinstance(doc, dict):
+                doc = RawDocument(**doc)
+            if doc.source_file not in source_files_to_update:
+                continue
+            content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
+            transactions_for_doc = [t for t in new_txns if t.source_file == doc.source_file]
+            conn.execute(
+                "INSERT OR REPLACE INTO normalized_document_cache (content_hash, source_file, transactions_json) VALUES (?, ?, ?)",
+                (content_hash, doc.source_file, json.dumps([t.model_dump() for t in transactions_for_doc])),
+            )
+        if source_files_to_update:
+            conn.commit()
+
+        return {
+            "transactions": new_txns,
+            "low_confidence_decisions": None,
+        }
+    return review_low_confidence_transactions
 
 
 def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:

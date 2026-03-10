@@ -11,6 +11,14 @@ import sqlite3
 from pathlib import Path
 
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+_CHECKPOINT_SERDE = JsonPlusSerializer(
+    allowed_msgpack_modules=(
+        tuple(["agent.state", "RawDocument"]),
+        tuple(["agent.state", "Transaction"]),
+    ),
+)
 
 _DEFAULT_DB_PATH = "data/agent.db"
 _connection: sqlite3.Connection | None = None
@@ -47,10 +55,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             PRIMARY KEY (date, from_currency, to_currency)
         );
         CREATE TABLE IF NOT EXISTS normalized_document_cache (
+            content_hash TEXT PRIMARY KEY,
             source_file TEXT NOT NULL,
-            content_hash TEXT NOT NULL,
-            transactions_json TEXT NOT NULL,
-            PRIMARY KEY (source_file, content_hash)
+            transactions_json TEXT NOT NULL
         );
     """)
     conn.commit()
@@ -58,4 +65,4 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
 def get_checkpointer() -> SqliteSaver:
     """Return a SqliteSaver using the shared DB so Studio and Streamlit share checkpoint state."""
-    return SqliteSaver(get_connection())
+    return SqliteSaver(get_connection(), serde=_CHECKPOINT_SERDE)

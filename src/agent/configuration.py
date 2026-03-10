@@ -9,7 +9,7 @@ class ReconciliationConfig:
 
     model_name: str = "gpt-4o-mini"
     vision_model_name: str = "claude-sonnet-4-6"
-    vision_max_tokens: int = 1024
+    vision_max_tokens: int = 4096
     temperature: float = 0.0
     base_currency: str = "USD"
     categories: list[str] = field(default_factory=lambda: [
@@ -18,5 +18,6 @@ class ReconciliationConfig:
         "Fees & Charges", "Salary", "Freelance", "Other Income", "Other",
         "Rent"
     ])
+    image_low_confidence_threshold: float = 0.99
 
 DEFAULT_CONFIG = ReconciliationConfig()

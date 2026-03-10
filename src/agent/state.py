@@ -23,6 +23,7 @@ class Transaction(BaseModel):
     needs_review: bool = False
     review_reason: str | None = None
     review_status: str | None = None
+    confidence: float | None = None # Confidence score for the transaction
 
 
 class RawDocument(BaseModel):
@@ -31,6 +32,7 @@ class RawDocument(BaseModel):
     source_file: str
     file_type: str
     content: str  # raw text for pdf, markdown table for xlsx
+    confidence: float | None = None # Confidence score for the image document
 
 
 def keep_last(old: list[Any], new: list[Any]) -> list[Any]:
@@ -52,6 +54,7 @@ class ReconciliationState(TypedDict):
     suspicious: list[Transaction]
     exchange_rates: dict[str, float]
     report: str | None
+    low_confidence_decisions: list[dict[str, Any]] | None
 
 
 def initial_state(source_paths: list[str]) -> ReconciliationState:
@@ -64,5 +67,6 @@ def initial_state(source_paths: list[str]) -> ReconciliationState:
         "duplicates": [],
         "suspicious": [],
         "exchange_rates": {},
-        "report": None
+        "report": None,
+        "low_confidence_decisions": None,
     }

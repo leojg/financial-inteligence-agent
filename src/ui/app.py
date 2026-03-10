@@ -18,6 +18,7 @@ load_dotenv()
 import pandas as pd  # noqa: E402  # type: ignore
 import streamlit as st  # noqa: E402
 
+from agent.configuration import DEFAULT_CONFIG  # noqa: E402
 from agent.db import get_checkpointer  # noqa: E402
 
 # --- Page config ---
@@ -55,7 +56,10 @@ def _init_session() -> None:
         "graph_state": None,       # last LangGraph state snapshot
         "graph_instance": None,    # compiled graph (cached)
         "thread_id": "reconciliation-1",
-        "interrupted": False,      # waiting at human_review node
+        "interrupted": False,      # waiting at review_low_confidence or human_review
+        "interrupt_at": None,      # "review_low_confidence_transactions" | "human_review"
+        "low_confidence_decisions": [],  # for review_low_confidence_transactions resume
+        "low_confidence_review_txn": None,  # transaction dict when modal/panel is open
         "review_decisions": {},    # {transaction_id: "confirmed" | "rejected"}
         "source_paths": [],        # list of paths (temp paths for uploads or user paths)
         "upload_dir": None,        # temp dir for uploaded files (created on first upload)
@@ -245,9 +249,15 @@ def _run_graph(source_paths: list[str]) -> None:
             state_values = getattr(snapshot, "values", None)
             st.session_state.graph_state = dict(state_values) if state_values is not None else {}
 
-            # Detect interrupt: next node is human_review (snapshot.next can be tuple or list)
+            # Detect interrupt: next node is review_low_confidence or human_review
             next_nodes = getattr(snapshot, "next", None) or ()
-            st.session_state.interrupted = "human_review" in next_nodes
+            st.session_state.interrupted = (
+                "review_low_confidence_transactions" in next_nodes
+                or "human_review" in next_nodes
+            )
+            st.session_state.interrupt_at = (
+                next_nodes[0] if next_nodes else None
+            )
 
             st.rerun()
         except Exception as e:
@@ -255,22 +265,27 @@ def _run_graph(source_paths: list[str]) -> None:
 
 
 def _resume_graph() -> None:
-    graph  = _get_graph()
+    graph = _get_graph()
     config = {"configurable": {"thread_id": st.session_state.thread_id}}
+    snapshot = graph.get_state(config)
+    next_nodes = getattr(snapshot, "next", None) or ()
 
-    # Apply review decisions to state
-    decisions = st.session_state.review_decisions
-    if decisions:
-        snapshot = graph.get_state(config)
-        current_txns = snapshot.values.get("transactions", [])
-        updated_txns = []
-        for t in current_txns:
-            d = t if isinstance(t, dict) else t.model_dump()
-            tid = d.get("id", "")
-            if tid in decisions:
-                d["review_status"] = decisions[tid]
-            updated_txns.append(d)
-        graph.update_state(config, {"transactions": updated_txns}, as_node="human_review")
+    if "review_low_confidence_transactions" in next_nodes:
+        decisions = st.session_state.get("low_confidence_decisions") or []
+        graph.update_state(config, {"low_confidence_decisions": decisions})
+
+    if "human_review" in next_nodes:
+        decisions = st.session_state.review_decisions
+        if decisions:
+            current_txns = snapshot.values.get("transactions", [])
+            updated_txns = []
+            for t in current_txns:
+                d = t if isinstance(t, dict) else t.model_dump()
+                tid = d.get("id", "")
+                if tid in decisions:
+                    d["review_status"] = decisions[tid]
+                updated_txns.append(d)
+            graph.update_state(config, {"transactions": updated_txns}, as_node="human_review")
 
     with st.spinner("Resuming agent…"):
         try:
@@ -280,9 +295,85 @@ def _resume_graph() -> None:
             st.session_state.graph_state = dict(state_values) if state_values is not None else {}
             st.session_state.interrupted = False
             st.session_state.review_decisions = {}
+            st.session_state.low_confidence_decisions = []
+            st.session_state.low_confidence_review_txn = None
             st.rerun()
         except Exception as e:
             st.error(f"Resume error: {e}")
+
+
+# ── Low-confidence review panel (image + form) ────────────────────────────────
+
+
+def _is_image_path(path: str) -> bool:
+    p = Path(path)
+    return p.suffix.lower() in (".png", ".jpg", ".jpeg")
+
+
+def _render_low_confidence_review_panel(
+    txn: dict[str, Any],
+    image_path: str,
+) -> None:
+    """Render a panel with image on one side and editable transaction form on the other (Save / Dismiss)."""
+    st.markdown("---")
+    st.subheader("✏️ Review transaction")
+    col_img, col_form = st.columns([1, 1])
+
+    with col_img:
+        if _is_image_path(image_path) and Path(image_path).is_file():
+            st.image(image_path, use_container_width=True)
+        else:
+            st.caption(f"Source: `{image_path}`")
+            st.info("Preview not available for this file type.")
+
+    with col_form:
+        with st.form("low_confidence_edit_form"):
+            date = st.text_input("Date", value=txn.get("date", ""), key="lc_date")
+            amount = st.number_input(
+                "Amount",
+                value=float(txn.get("amount_original", 0) or 0),
+                step=0.01,
+                format="%.2f",
+                key="lc_amount",
+            )
+            currency = st.text_input("Currency", value=txn.get("currency", ""), key="lc_currency")
+            merchant = st.text_input("Merchant", value=txn.get("merchant", ""), key="lc_merchant")
+            account = st.text_input("Account", value=txn.get("account", ""), key="lc_account")
+
+            col_save, col_dismiss, col_back, _ = st.columns([1, 1, 1, 1])
+            with col_save:
+                save_clicked = st.form_submit_button("Save")
+            with col_dismiss:
+                dismiss_clicked = st.form_submit_button("Dismiss")
+            with col_back:
+                back_clicked = st.form_submit_button("Back")
+
+        if back_clicked:
+            st.session_state.low_confidence_review_txn = None
+            st.rerun()
+        if save_clicked:
+            updated = dict(txn)
+            updated["date"] = date
+            updated["amount_original"] = amount
+            updated["currency"] = currency
+            updated["merchant"] = merchant
+            updated["account"] = account
+            decisions = st.session_state.get("low_confidence_decisions") or []
+            by_id = {d["id"]: d for d in decisions if isinstance(d, dict) and d.get("id")}
+            by_id[txn.get("id", "")] = {"id": txn.get("id"), "action": "edit", "transaction": updated}
+            st.session_state.low_confidence_decisions = list(by_id.values())
+            st.session_state.low_confidence_review_txn = None
+            st.success("Transaction updated. You can review more or click **Resume** in the sidebar.")
+            st.rerun()
+        if dismiss_clicked:
+            tid = txn.get("id", "")
+            decisions = st.session_state.get("low_confidence_decisions") or []
+            by_id = {d["id"]: d for d in decisions if isinstance(d, dict) and d.get("id")}
+            by_id[tid] = {"id": tid, "action": "dismiss"}
+            st.session_state.low_confidence_decisions = list(by_id.values())
+            st.session_state.low_confidence_review_txn = None
+            st.info("Transaction dismissed. You can review more or click **Resume** in the sidebar.")
+            st.rerun()
 
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
@@ -380,6 +471,48 @@ def render_main() -> None:
 
         if not st.session_state.interrupted:
             st.info("No pending review. Run the agent to generate results.")
+        elif st.session_state.get("interrupt_at") == "review_low_confidence_transactions":
+            threshold = getattr(DEFAULT_CONFIG, "image_low_confidence_threshold", 0.95)
+            low_conf: list[dict[str, Any]] = []
+            for t in transactions:
+                d = t if isinstance(t, dict) else (t.model_dump() if hasattr(t, "model_dump") else {})
+                conf = d.get("confidence") if isinstance(d, dict) else None
+                if conf is not None and conf < threshold:
+                    low_conf.append(d)
+
+            if low_conf:
+                # If a transaction is open for review, show the panel first
+                review_txn = st.session_state.get("low_confidence_review_txn")
+                if review_txn:
+                    _render_low_confidence_review_panel(
+                        review_txn,
+                        review_txn.get("source_file", ""),
+                    )
+
+                st.markdown("**Low-confidence transactions** — click **Review** to edit or dismiss.")
+                decisions_by_id = {
+                    d["id"]: d for d in (st.session_state.get("low_confidence_decisions") or [])
+                    if isinstance(d, dict) and d.get("id")
+                }
+                for t in low_conf:
+                    d = t if isinstance(t, dict) else t
+                    tid = d.get("id", "")
+                    action = decisions_by_id.get(tid, {}).get("action")
+                    label = f"{d.get('date')} · {d.get('merchant')} · {d.get('amount_original')} {d.get('currency')}"
+                    col1, col2 = st.columns([0.85, 0.15])
+                    with col1:
+                        st.markdown(f"**{label}**")
+                        if action:
+                            st.caption(f"→ {action}")
+                    with col2:
+                        if st.button("Review", key=f"lc_review_{tid}", type="primary"):
+                            st.session_state.low_confidence_review_txn = d
+                            st.rerun()
+                st.markdown("---")
+                st.caption("Click **Resume** in the sidebar when done to continue the agent.")
+            else:
+                st.success("No low-confidence transactions to review.")
+                st.caption("Click **Resume** in the sidebar to continue.")
         else:
             needs_review = [
                 t for t in transactions

@@ -19,6 +19,7 @@ from agent.nodes import (
     make_detect_duplicates_node,
     make_flag_suspicious_node,
     make_normalize_node,
+    make_review_low_confidence_transactions_node,
     passthrough,
 )
 from agent.state import ReconciliationState
@@ -41,6 +42,21 @@ def _has_documents(state: ReconciliationState) -> str:
             return "ingest"
     return "skip_documents"
 
+
+def _make_has_low_confidence(threshold: float):
+    """Return a conditional edge fn: only route to review when there are low-confidence transactions."""
+
+    def _has_low_confidence(state: ReconciliationState) -> str:
+        transactions = state.get("transactions") or []
+        for t in transactions:
+            conf = t.get("confidence") if isinstance(t, dict) else getattr(t, "confidence", None)
+            if conf is not None and conf < threshold:
+                return "review_low_confidence_transactions"
+        return "convert_currency"
+
+    return _has_low_confidence
+
+
 def make_graph(
     config: ReconciliationConfig = DEFAULT_CONFIG,
     checkpointer: Any = None,
@@ -52,6 +68,10 @@ def make_graph(
     graph.add_node("ingest", ingest)
     graph.add_node("ingest_images", make_ingest_images_node(config))
     graph.add_node("normalize", make_normalize_node(config))
+    graph.add_node(
+        "review_low_confidence_transactions",
+        make_review_low_confidence_transactions_node(config),
+    )
     graph.add_node("convert_currency", make_convert_currency_node(config))  # type: ignore[arg-type]
     graph.add_node("categorize", make_categorize_node(config))  # type: ignore[arg-type]
     graph.add_node("detect_duplicates", make_detect_duplicates_node(config))  # type: ignore[arg-type]
@@ -83,8 +103,16 @@ def make_graph(
     graph.add_edge("skip_images", "normalize")
     graph.add_edge("skip_documents", "normalize")
 
-    graph.add_edge("normalize", "convert_currency")
-
+    graph.add_conditional_edges(
+        "normalize",
+        _make_has_low_confidence(config.image_low_confidence_threshold),
+        {
+            "review_low_confidence_transactions": "review_low_confidence_transactions",
+            "convert_currency": "convert_currency",
+        },
+    )
+    graph.add_edge("review_low_confidence_transactions", "convert_currency")
+    
     graph.add_edge("convert_currency", "categorize")
     
     graph.add_edge("categorize", "detect_duplicates")
@@ -99,7 +127,7 @@ def make_graph(
 
     return graph.compile(
         checkpointer=checkpointer,
-        interrupt_before=["human_review"]
+        interrupt_before=["review_low_confidence_transactions", "human_review"],
     )
 
 graph = make_graph(checkpointer=None)

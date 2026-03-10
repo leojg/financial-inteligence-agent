@@ -23,6 +23,7 @@ streamlit>=1.28.0
 
 # Optional: synthetic bank statement generation (scripts/generate_samples.py)
 reportlab>=4.0.0
+playwright>=1.58.0
 
 # Dev & test
 pytest>=8.0.0
