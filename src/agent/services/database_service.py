@@ -24,9 +24,8 @@ class DatabaseService:
     """Centralized persistence for the finance agent (cache, categories, duplicates, runs, transactions)."""
 
     def __init__(self) -> None:
+        """Initialize with no dependencies."""
         pass
-
-    # ── Normalized document cache ─────────────────────────────────────────────
 
     def get_cached_transactions(self, content_hash: str) -> list[dict[str, Any]] | None:
         """Return cached transactions JSON for this content_hash, or None on miss."""
@@ -39,7 +38,7 @@ class DatabaseService:
         cur.close()
         if row is None:
             return None
-        return json.loads(str(row[0]))
+        return list(json.loads(str(row[0])))
 
     def save_normalized_document(
         self,
@@ -58,8 +57,6 @@ class DatabaseService:
             (content_hash, source_file, transactions_json),
         )
         conn.commit()
-
-    # ── Merchant categories ──────────────────────────────────────────────────
 
     @staticmethod
     def normalize_merchant(merchant: str) -> str:
@@ -100,7 +97,7 @@ class DatabaseService:
     @staticmethod
     def transaction_fingerprint(date: str, amount: float, currency: str, merchant: str) -> str:
         """Return a stable SHA-256 fingerprint for a transaction (identifies same real-world charge)."""
-        key = f"{date}|{amount}|{currency}|{PersistenceService.normalize_merchant(merchant)}"
+        key = f"{date}|{amount}|{currency}|{DatabaseService.normalize_merchant(merchant)}"
         return hashlib.sha256(key.encode()).hexdigest()
 
     def get_duplicate_pair(self, fp_a: str, fp_b: str) -> dict[str, Any] | None:
@@ -136,8 +133,6 @@ class DatabaseService:
             (a, b, int(is_duplicate), reason),
         )
         conn.commit()
-
-    # ── Runs and transactions ────────────────────────────────────────────────
 
     def insert_run(
         self,

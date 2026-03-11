@@ -10,8 +10,8 @@ import os
 import sqlite3
 from pathlib import Path
 
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 _CHECKPOINT_SERDE = JsonPlusSerializer(
     allowed_msgpack_modules=(
@@ -22,6 +22,7 @@ _CHECKPOINT_SERDE = JsonPlusSerializer(
 
 _DEFAULT_DB_PATH = "data/agent.db"
 _connection: sqlite3.Connection | None = None
+_checkpoint_connection: sqlite3.Connection | None = None
 
 
 def get_db_path() -> str:
@@ -34,14 +35,29 @@ def get_db_path() -> str:
     return path or _DEFAULT_DB_PATH
 
 
+def _connect(path: str, *, for_checkpointer: bool = False) -> sqlite3.Connection:
+    """Open a SQLite connection with WAL mode for better concurrent access."""
+    conn = sqlite3.connect(path, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    if not for_checkpointer:
+        ensure_schema(conn)
+    return conn
+
+
 def get_connection() -> sqlite3.Connection:
     """Return a shared SQLite connection to the app DB; ensures schema on first use."""
     global _connection
     if _connection is None:
-        path = get_db_path()
-        _connection = sqlite3.connect(path, check_same_thread=False)
-        ensure_schema(_connection)
+        _connection = _connect(get_db_path())
     return _connection
+
+
+def _get_checkpoint_connection() -> sqlite3.Connection:
+    """Dedicated connection for the LangGraph checkpointer to avoid concurrent commit on the same connection when the graph runs fan-out (multiple threads)."""
+    global _checkpoint_connection
+    if _checkpoint_connection is None:
+        _checkpoint_connection = _connect(get_db_path(), for_checkpointer=True)
+    return _checkpoint_connection
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
@@ -119,5 +135,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
 
 def get_checkpointer() -> SqliteSaver:
-    """Return a SqliteSaver using the shared DB so Studio and Streamlit share checkpoint state."""
-    return SqliteSaver(get_connection(), serde=_CHECKPOINT_SERDE)
+    """Return a SqliteSaver using a dedicated checkpoint connection (same DB file, WAL mode).
+    
+    Avoids SystemError when fan-out runs multiple threads writing checkpoints.
+    """
+    return SqliteSaver(_get_checkpoint_connection(), serde=_CHECKPOINT_SERDE)

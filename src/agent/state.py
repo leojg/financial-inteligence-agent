@@ -1,5 +1,6 @@
 """State types for the reconciliation graph (Transaction, RawDocument, ReconciliationState)."""
 
+import uuid
 from typing import Annotated, Any, TypedDict
 
 from pydantic import BaseModel
@@ -55,6 +56,7 @@ class ReconciliationState(TypedDict):
     exchange_rates: dict[str, float]
     report: str | None
     low_confidence_decisions: list[dict[str, Any]] | None
+    run_id: str
 
 
 def initial_state(source_paths: list[str]) -> ReconciliationState:
@@ -69,4 +71,5 @@ def initial_state(source_paths: list[str]) -> ReconciliationState:
         "exchange_rates": {},
         "report": None,
         "low_confidence_decisions": None,
+        "run_id": str(uuid.uuid4()),
     }

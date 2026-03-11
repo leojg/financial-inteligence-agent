@@ -5,6 +5,7 @@ Run with: streamlit run src/ui/app.py
 Requires the project to be installed (pip install -e .) so the agent package is importable.
 """
 
+import json
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -15,11 +16,12 @@ load_dotenv()
 
 # noqa: E402 for imports below
 
-import pandas as pd  # noqa: E402  # type: ignore
+import pandas as pd  # type: ignore[import-untyped]  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from agent.configuration import DEFAULT_CONFIG  # noqa: E402
 from agent.db import get_checkpointer  # noqa: E402
+from agent.services.database_service import DatabaseService  # noqa: E402
 
 # --- Page config ---
 st.set_page_config(
@@ -63,6 +65,8 @@ def _init_session() -> None:
         "review_decisions": {},    # {transaction_id: "confirmed" | "rejected"}
         "source_paths": [],        # list of paths (temp paths for uploads or user paths)
         "upload_dir": None,        # temp dir for uploaded files (created on first upload)
+        "past_runs_selected_run_id": None,  # run_id for drill-down in Past runs
+        "pending_resume": False,  # True when Resume was clicked; agent will run this cycle, button disabled
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -76,7 +80,7 @@ def _ensure_upload_dir() -> Path:
     return Path(st.session_state.upload_dir)
 
 
-def _process_uploads(uploaded_files: list) -> list[str]:
+def _process_uploads(uploaded_files: list[Any]) -> list[str]:
     """Save uploaded files to temp dir and return their paths. Dedupe by name."""
     if not uploaded_files:
         return []
@@ -119,6 +123,21 @@ def _get_graph() -> Any:
             checkpointer=st.session_state.checkpointer
         )
     return st.session_state.graph_instance
+
+
+def _parse_source_paths(raw: Any) -> list[str]:
+    """Parse source_paths from DB (stored as JSON string). Return list of file names for display."""
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        try:
+            paths = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return [raw]
+        return [Path(p).name for p in paths] if isinstance(paths, list) else []
+    if isinstance(raw, list):
+        return [Path(p).name if isinstance(p, str) else str(p) for p in raw]
+    return []
 
 
 def _transactions_df(transactions: list[Any]) -> pd.DataFrame:
@@ -191,8 +210,8 @@ def render_sidebar() -> None:
             for i, path in enumerate(st.session_state.source_paths):
                 col_path, col_rm = st.columns([1, 0.15])
                 with col_path:
-                    p = Path(path)
-                    label = p.name if (upload_dir and p.parent == upload_dir) else path
+                    path_obj = Path(path)
+                    label = path_obj.name if (upload_dir and path_obj.parent == upload_dir) else path
                     st.text(label)
                 with col_rm:
                     if st.button("🗑", key=f"remove_{i}", help="Remove"):
@@ -207,8 +226,16 @@ def render_sidebar() -> None:
 
         if st.session_state.interrupted:
             st.info("⏸ Waiting for your review.\nConfirm or reject items in the Review tab, then click Resume.")
-            if st.button("▶ Resume", use_container_width=True, type="primary"):
-                _resume_graph()
+            resume_disabled = st.session_state.get("pending_resume", False)
+            if st.button(
+                "▶ Resume",
+                disabled=resume_disabled,
+                use_container_width=True,
+                type="primary",
+                key="btn_resume",
+            ):
+                st.session_state.pending_resume = True
+                st.rerun()
 
         if st.session_state.graph_state:
             st.markdown("---")
@@ -270,11 +297,13 @@ def _resume_graph() -> None:
     snapshot = graph.get_state(config)
     next_nodes = getattr(snapshot, "next", None) or ()
 
+    resume_input = None
+
     if "review_low_confidence_transactions" in next_nodes:
         decisions = st.session_state.get("low_confidence_decisions") or []
-        graph.update_state(config, {"low_confidence_decisions": decisions})
+        graph.update_state(config, {"low_confidence_decisions": decisions}, as_node="review_low_confidence_transactions")
 
-    if "human_review" in next_nodes:
+    elif "human_review" in next_nodes:
         decisions = st.session_state.review_decisions
         if decisions:
             current_txns = snapshot.values.get("transactions", [])
@@ -289,16 +318,31 @@ def _resume_graph() -> None:
 
     with st.spinner("Resuming agent…"):
         try:
-            graph.invoke(None, config=config)
+            if resume_input is not None:
+                graph.invoke(resume_input, config=config)
+            else:
+                graph.invoke(None, config=config)
             snapshot = graph.get_state(config)
             state_values = getattr(snapshot, "values", None)
             st.session_state.graph_state = dict(state_values) if state_values is not None else {}
-            st.session_state.interrupted = False
-            st.session_state.review_decisions = {}
-            st.session_state.low_confidence_decisions = []
-            st.session_state.low_confidence_review_txn = None
+
+            # The graph may have hit another interrupt_before node (e.g. resumed from
+            # review_low_confidence_transactions and now paused at human_review).
+            next_nodes = getattr(snapshot, "next", None) or ()
+            still_interrupted = (
+                "review_low_confidence_transactions" in next_nodes
+                or "human_review" in next_nodes
+            )
+            st.session_state.interrupted = still_interrupted
+            st.session_state.interrupt_at = next_nodes[0] if next_nodes else None
+            st.session_state.pending_resume = False
+            if not still_interrupted:
+                st.session_state.review_decisions = {}
+                st.session_state.low_confidence_decisions = []
+                st.session_state.low_confidence_review_txn = None
             st.rerun()
         except Exception as e:
+            st.session_state.pending_resume = False
             st.error(f"Resume error: {e}")
 
 
@@ -374,6 +418,98 @@ def _render_low_confidence_review_panel(
             st.session_state.low_confidence_review_txn = None
             st.info("Transaction dismissed. You can review more or click **Resume** in the sidebar.")
             st.rerun()
+
+
+# ── Past runs (from DB) ───────────────────────────────────────────────────────
+
+
+def render_past_runs() -> None:
+    """Show past reconciliation runs from DB with summaries and drill-down to transactions."""
+    db = DatabaseService()
+    runs = db.get_runs()
+
+    if not runs:
+        st.info("No past runs yet. Run a reconciliation from the **Run reconciliation** tab.")
+        return
+
+    selected_run_id = st.session_state.get("past_runs_selected_run_id")
+
+    if selected_run_id:
+        # Drill-down: show transactions for the selected run
+        run = next((r for r in runs if r.get("run_id") == selected_run_id), None)
+        if run:
+            if st.button("← Back to runs", key="past_runs_back"):
+                st.session_state.past_runs_selected_run_id = None
+                st.rerun()
+            st.markdown("---")
+            _render_run_detail(run, db)
+        else:
+            st.session_state.past_runs_selected_run_id = None
+            st.rerun()
+        return
+
+    st.subheader("Past reconciliation runs")
+    st.caption("Click **View** to see transactions for a run.")
+
+    for r in runs:
+        run_id = r.get("run_id", "")
+        created = r.get("created_at") or ""
+        completed = r.get("completed_at") or ""
+        status = r.get("status", "")
+        total_txn = r.get("total_transactions") or 0
+        total_dup = r.get("total_duplicates") or 0
+        total_sus = r.get("total_suspicious") or 0
+        base_ccy = r.get("base_currency") or "USD"
+        source_paths = _parse_source_paths(r.get("source_paths"))
+
+        with st.container():
+            col1, col2 = st.columns([1, 0.2])
+            with col1:
+                st.markdown(f"**Run** `{run_id[:12]}…` · **{status}**")
+                st.caption(f"Started: {created}")
+                if completed:
+                    st.caption(f"Completed: {completed}")
+                if source_paths:
+                    st.caption(f"Sources: {', '.join(source_paths[:5])}{'…' if len(source_paths) > 5 else ''}")
+                st.markdown(
+                    f"Transactions: **{total_txn}** · Duplicates: **{total_dup}** · "
+                    f"Suspicious: **{total_sus}** · {base_ccy}"
+                )
+            with col2:
+                if st.button("View", key=f"view_run_{run_id}", type="primary"):
+                    st.session_state.past_runs_selected_run_id = run_id
+                    st.rerun()
+            st.markdown("---")
+
+
+def _render_run_detail(run: dict[str, Any], db: DatabaseService) -> None:
+    """Render summary and transactions table for a single run."""
+    run_id = run.get("run_id", "")
+    st.subheader(f"Run: {run_id[:16]}…")
+    created = run.get("created_at") or ""
+    status = run.get("status", "")
+    total_txn = run.get("total_transactions") or 0
+    total_dup = run.get("total_duplicates") or 0
+    total_sus = run.get("total_suspicious") or 0
+    source_paths = _parse_source_paths(run.get("source_paths"))
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Transactions", total_txn)
+    m2.metric("Duplicates", total_dup)
+    m3.metric("Suspicious", total_sus)
+    m4.metric("Status", status)
+    st.caption(f"Started: {created}")
+    if source_paths:
+        st.caption(f"Sources: {', '.join(source_paths)}")
+
+    transactions = db.get_run_transactions(run_id)
+    if not transactions:
+        st.info("No transactions stored for this run.")
+        return
+
+    st.subheader(f"Transactions ({len(transactions)})")
+    df = _transactions_df(transactions)
+    st.dataframe(df.drop(columns=["_id"]), use_container_width=True, hide_index=True)
 
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
@@ -480,7 +616,16 @@ def render_main() -> None:
                 if conf is not None and conf < threshold:
                     low_conf.append(d)
 
-            if low_conf:
+            # Deduplicate by id so each transaction has exactly one Review button (avoids duplicate key)
+            seen_lc_ids: set[str] = set()
+            unique_low_conf: list[dict[str, Any]] = []
+            for d in low_conf:
+                tid = d.get("id", "") if isinstance(d, dict) else ""
+                if tid and tid not in seen_lc_ids:
+                    seen_lc_ids.add(tid)
+                    unique_low_conf.append(d if isinstance(d, dict) else (d.model_dump() if hasattr(d, "model_dump") else {}))
+
+            if unique_low_conf:
                 # If a transaction is open for review, show the panel first
                 review_txn = st.session_state.get("low_confidence_review_txn")
                 if review_txn:
@@ -494,7 +639,7 @@ def render_main() -> None:
                     d["id"]: d for d in (st.session_state.get("low_confidence_decisions") or [])
                     if isinstance(d, dict) and d.get("id")
                 }
-                for t in low_conf:
+                for i, t in enumerate(unique_low_conf):
                     d = t if isinstance(t, dict) else t
                     tid = d.get("id", "")
                     action = decisions_by_id.get(tid, {}).get("action")
@@ -505,7 +650,7 @@ def render_main() -> None:
                         if action:
                             st.caption(f"→ {action}")
                     with col2:
-                        if st.button("Review", key=f"lc_review_{tid}", type="primary"):
+                        if st.button("Review", key=f"lc_review_{i}_{tid}", type="primary"):
                             st.session_state.low_confidence_review_txn = d
                             st.rerun()
                 st.markdown("---")
@@ -518,10 +663,15 @@ def render_main() -> None:
                 t for t in transactions
                 if (t if isinstance(t, dict) else t.model_dump()).get("needs_review")
             ]
-            # Deduplicate by id so each transaction has exactly one checkbox (avoids duplicate key)
+            suspicious_txns = [
+                t for t in transactions
+                if (t if isinstance(t, dict) else t.model_dump()).get("suspicious")
+            ]
+            from_duplicates = duplicates or []
+            from_suspicious = suspicious or []
             seen_ids: set[str] = set()
             unique_needs_review: list[Any] = []
-            for t in needs_review:
+            for t in needs_review + suspicious_txns + from_duplicates + from_suspicious:
                 d = t if isinstance(t, dict) else t.model_dump()
                 tid = d.get("id", "")
                 if tid and tid not in seen_ids:
@@ -587,7 +737,17 @@ def main() -> None:
     """Initialize session, render sidebar and main content."""
     _init_session()
     render_sidebar()
-    render_main()
+
+    # Run resume in this cycle so the sidebar has already rendered with Resume disabled
+    if st.session_state.get("pending_resume") and st.session_state.get("interrupted"):
+        _resume_graph()
+        return
+
+    tab_run, tab_past = st.tabs(["Run reconciliation", "Past runs"])
+    with tab_run:
+        render_main()
+    with tab_past:
+        render_past_runs()
 
 
 if __name__ == "__main__":

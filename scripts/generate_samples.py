@@ -8,8 +8,6 @@ Usage:
 
 import argparse
 import logging
-import math
-import os
 import textwrap
 from datetime import date, timedelta
 from pathlib import Path
@@ -20,7 +18,7 @@ from openpyxl.utils import get_column_letter
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import cm, mm
+from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas as rl_canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
@@ -403,8 +401,6 @@ def _statement_html(title: str, subtitle: str, account_info: list,
     credits = sum(a for _, _, a, _, _ in transactions if a > 0)
     debits  = sum(a for _, _, a, _, _ in transactions if a < 0)
     currency = transactions[0][3]
-
-    info_lines = "".join(f"<p>{ln}</p>" for ln in account_info)
 
     return f"""<!DOCTYPE html>
 <html>
@@ -1014,7 +1010,6 @@ def _draw_receipt_pdf(c_obj, x, y, width, merchant_key: str,
         "items": [("Compra", 1.00)],
     })
 
-    from reportlab.pdfgen import canvas as _c
     from reportlab.lib import colors as _col
 
     LINE_H = 14
@@ -1069,10 +1064,10 @@ def _draw_receipt_pdf(c_obj, x, y, width, merchant_key: str,
     iva  = round(abs(amount) - base, 2)
 
     c_obj.setFont("Helvetica", 7)
-    c_obj.drawString(x + 8, cur_y, f"Base imponible:")
+    c_obj.drawString(x + 8, cur_y, "Base imponible:")
     c_obj.drawRightString(x + width - 8, cur_y, f"{currency} {base:,.2f}")
     cur_y -= 12
-    c_obj.drawString(x + 8, cur_y, f"IVA 22% incluido:")
+    c_obj.drawString(x + 8, cur_y, "IVA 22% incluido:")
     c_obj.drawRightString(x + width - 8, cur_y, f"{currency} {iva:,.2f}")
     cur_y -= 12
 

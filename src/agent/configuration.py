@@ -18,6 +18,6 @@ class ReconciliationConfig:
         "Fees & Charges", "Salary", "Freelance", "Other Income", "Other",
         "Rent"
     ])
-    image_low_confidence_threshold: float = 0.99
+    image_low_confidence_threshold: float = 0.98
 
 DEFAULT_CONFIG = ReconciliationConfig()

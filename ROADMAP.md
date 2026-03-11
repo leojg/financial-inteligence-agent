@@ -61,13 +61,15 @@ Real bank statements come as PDFs or scanned images. This version adds a documen
 
 Currently the SQLite DB is the LangGraph checkpointer — it stores graph state, not reconciled transactions. This version introduces a proper business data layer that persists reconciliation results independently of graph execution state.
 
-**Planned:**
+**Delivered:**
 - `transactions` table: canonical schema per reconciled transaction
-- `reconciliation_runs` table: metadata per run (date, accounts, totals, flags)
 - `categories` table: category taxonomy with user-defined overrides
 - Post-run data written to business DB from `generate_report` node
-- Query layer: filter transactions by date range, account, category, amount
+- `reconciliation_runs` table: metadata per run (date, accounts, totals, flags)
 - Streamlit "History" tab showing past runs and their summaries
+cC
+**Planned:**
+- Query layer: filter transactions by date range, account, category, amount
 - DB migration strategy for schema evolution
 
 ---

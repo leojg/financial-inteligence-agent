@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
 from pathlib import Path
+from typing import Any, Callable
 
 from langgraph.graph import END, START, StateGraph
 
@@ -11,18 +11,19 @@ from agent.configuration import DEFAULT_CONFIG, ReconciliationConfig
 from agent.nodes import (
     generate_report,
     human_review,
-    prepare_ingest,
     ingest,
-    make_ingest_images_node,
     make_categorize_node,
     make_convert_currency_node,
     make_detect_duplicates_node,
     make_flag_suspicious_node,
+    make_ingest_images_node,
     make_normalize_node,
     make_review_low_confidence_transactions_node,
     passthrough,
+    prepare_ingest,
 )
 from agent.state import ReconciliationState
+
 
 def _has_images(state: ReconciliationState) -> str:
     """Return 'ingest_images' if source_files has image paths, else 'skip_images'."""
@@ -43,7 +44,7 @@ def _has_documents(state: ReconciliationState) -> str:
     return "skip_documents"
 
 
-def _make_has_low_confidence(threshold: float):
+def _make_has_low_confidence(threshold: float) -> Callable[[ReconciliationState], str]:
     """Return a conditional edge fn: only route to review when there are low-confidence transactions."""
 
     def _has_low_confidence(state: ReconciliationState) -> str:
@@ -66,11 +67,11 @@ def make_graph(
 
     graph.add_node("prepare_ingest", prepare_ingest)
     graph.add_node("ingest", ingest)
-    graph.add_node("ingest_images", make_ingest_images_node(config))
-    graph.add_node("normalize", make_normalize_node(config))
+    graph.add_node("ingest_images", make_ingest_images_node(config))  # type: ignore[arg-type]
+    graph.add_node("normalize", make_normalize_node(config))  # type: ignore[arg-type]
     graph.add_node(
         "review_low_confidence_transactions",
-        make_review_low_confidence_transactions_node(config),
+        make_review_low_confidence_transactions_node(config),  # type: ignore[arg-type]
     )
     graph.add_node("convert_currency", make_convert_currency_node(config))  # type: ignore[arg-type]
     graph.add_node("categorize", make_categorize_node(config))  # type: ignore[arg-type]
@@ -116,7 +117,6 @@ def make_graph(
     graph.add_edge("convert_currency", "categorize")
     
     graph.add_edge("categorize", "detect_duplicates")
-    
     graph.add_edge("categorize", "flag_suspicious")
     
     graph.add_edge("detect_duplicates", "human_review")

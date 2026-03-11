@@ -1,5 +1,6 @@
 """Reconciliation graph nodes: ingest, normalize, convert_currency, categorize, duplicates, suspicious, report."""
 
+import base64
 import hashlib
 import json
 import logging
@@ -9,16 +10,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
 from agent.configuration import ReconciliationConfig
-from agent.services.exchange_service import ExchangeService
 from agent.services.database_service import DatabaseService
+from agent.services.exchange_service import ExchangeService
 from agent.state import RawDocument, ReconciliationState, Transaction
 from agent.utils.parsers import load_documents
-from langchain_anthropic import ChatAnthropic
-import base64
-from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def ingest(state: ReconciliationState) -> dict[str, Any]:
 
 def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a ingest_images node that loads images from source_folder and returns raw_images."""
-    llm = ChatAnthropic(model=config.vision_model_name, max_tokens=config.vision_max_tokens)
+    llm = ChatAnthropic(model=config.vision_model_name, max_tokens=config.vision_max_tokens)  # type: ignore[call-arg]
 
     def ingest_images(state: ReconciliationState) -> dict[str, Any]:
         source_files = state["source_files"]
@@ -92,15 +93,15 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
             data = base64.standard_b64encode(p.read_bytes()).decode("utf-8")
             media_type = "image/png" if p.suffix.lower() == ".png" else "image/jpeg"
             images.append((path, data, media_type))
-        content = []
+        msg_content: list[dict[str, Any]] = []
 
         for path, data, media_type in images:
-            content.append({
+            msg_content.append({
                 "type": "image",
                 "source": {"type": "base64", "media_type": media_type, "data": data},
             })
-        
-        content.append({
+
+        msg_content.append({
             "type": "text",
             "text": """Extract all line items and totals from this receipt. 
             Include the date, amount and description of the charges.
@@ -113,7 +114,7 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
             """
             })
 
-        messages = [HumanMessage(content=content)]
+        messages = [HumanMessage(content=msg_content)]  # type: ignore[arg-type]
         response = llm.invoke(messages)
 
         raw_text = response.content if hasattr(response, "content") else str(response)
@@ -148,16 +149,16 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
             txs = item.get("transactions", [])
             confidence = item.get("confidence", 0.0)
             # Format as markdown so normalize can re-extract
-            lines = [f"| date | amount | description |", "|------|--------|-------------|"]
+            lines = ["| date | amount | description |", "|------|--------|-------------|"]
             for tx in txs:
                 lines.append(f"| {tx.get('date', '')} | {tx.get('amount', '')} | {tx.get('description', '')} |")
-            content = "\n".join(lines) if lines else ""
+            doc_content = "\n".join(lines) if lines else ""
             confidence = item.get("confidence", 0.0)
             raw_documents.append(
                 RawDocument(
                     source_file=path,
                     file_type="image",
-                    content=content,
+                    content=doc_content,
                     confidence=confidence,
                 )
             )
@@ -240,7 +241,6 @@ def make_review_low_confidence_transactions_node(
     config: ReconciliationConfig,
 ) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a node that applies user decisions for low-confidence transactions (runs after interrupt)."""
-
     threshold = config.image_low_confidence_threshold
 
     def review_low_confidence_transactions(state: ReconciliationState) -> dict[str, Any]:
@@ -620,6 +620,7 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
             Return ONLY a JSON array of suspicious transaction ids, no preamble, no markdown.
             If nothing is clearly suspicious return []:
             [{{"id": "transaction-id", "reason": "brief reason"}}]
+            In "reason" use only plain text; do not put double-quotes or newlines inside the value (so the JSON stays valid).
             """
 
             try:
@@ -648,10 +649,10 @@ def human_review(state: ReconciliationState) -> dict[str, Any]:
     return {}
 
 
-def generate_report(state: ReconciliationState) -> dict[str, Any]:
+def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[str, Any]:
     """Build a text report from transactions, duplicates, and suspicious lists."""
     transactions = [
-        Transaction(**t) if isinstance(t, dict) else t 
+        Transaction(**t) if isinstance(t, dict) else t
         for t in state["transactions"]
     ]
 
@@ -678,13 +679,16 @@ def generate_report(state: ReconciliationState) -> dict[str, Any]:
     Duplicates found: {duplicates}
     Suspicious transactions: {suspicious}
     Needs review: {needs_review}
-    
+
     By category: {by_category}
     """
-    
+
     run_id = state.get("run_id")
     if run_id:
+        thread_id = (config or {}).get("configurable", {}).get("thread_id", "")
+        source_paths = state.get("source_paths") or []
         database_service = DatabaseService()
+        database_service.insert_run(run_id, thread_id, source_paths)
         rows = [
             {
                 "id": t.id,
