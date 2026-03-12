@@ -14,9 +14,9 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 _CHECKPOINT_SERDE = JsonPlusSerializer(
-    allowed_msgpack_modules=(
-        tuple(["agent.state", "RawDocument"]),
-        tuple(["agent.state", "Transaction"]),
+    allowed_json_modules=(
+        ("agent.state", "RawDocument"),
+        ("agent.state", "Transaction"),
     ),
 )
 
