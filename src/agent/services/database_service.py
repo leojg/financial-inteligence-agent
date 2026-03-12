@@ -235,3 +235,67 @@ class DatabaseService:
         colnames = [d[0] for d in cur.description]
         cur.close()
         return [dict(zip(colnames, r)) for r in rows]
+
+    def get_distinct_filter_values(self) -> dict[str, list[str]]:
+        """Return distinct accounts and categories across all stored transactions."""
+        conn = get_connection()
+        cur = conn.execute("SELECT DISTINCT account FROM transactions ORDER BY account")
+        accounts = [row[0] for row in cur.fetchall() if row[0]]
+        cur.close()
+        cur = conn.execute(
+            "SELECT DISTINCT category FROM transactions WHERE category IS NOT NULL ORDER BY category"
+        )
+        categories = [row[0] for row in cur.fetchall() if row[0]]
+        cur.close()
+        return {"accounts": accounts, "categories": categories}
+
+    def query_transactions(
+        self,
+        *,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        accounts: list[str] | None = None,
+        categories: list[str] | None = None,
+        amount_min: float | None = None,
+        amount_max: float | None = None,
+        run_id: str | None = None,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        """Return filtered transactions with DB-side WHERE clause. None = cross-run."""
+        conditions: list[str] = []
+        params: list[Any] = []
+
+        if run_id is not None:
+            conditions.append("run_id = ?")
+            params.append(run_id)
+        if date_from is not None:
+            conditions.append("date >= ?")
+            params.append(date_from)
+        if date_to is not None:
+            conditions.append("date <= ?")
+            params.append(date_to)
+        if accounts:
+            placeholders = ",".join("?" * len(accounts))
+            conditions.append(f"account IN ({placeholders})")
+            params.extend(accounts)
+        if categories:
+            placeholders = ",".join("?" * len(categories))
+            conditions.append(f"category IN ({placeholders})")
+            params.extend(categories)
+        if amount_min is not None:
+            conditions.append("amount_original >= ?")
+            params.append(amount_min)
+        if amount_max is not None:
+            conditions.append("amount_original <= ?")
+            params.append(amount_max)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        sql = f"SELECT * FROM transactions {where} ORDER BY date DESC LIMIT ?"
+        params.append(limit)
+
+        conn = get_connection()
+        cur = conn.execute(sql, params)
+        rows = cur.fetchall()
+        colnames = [d[0] for d in cur.description]
+        cur.close()
+        return [dict(zip(colnames, r)) for r in rows]

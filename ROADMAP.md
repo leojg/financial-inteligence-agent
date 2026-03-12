@@ -68,8 +68,6 @@ Currently the SQLite DB is the LangGraph checkpointer — it stores graph state,
 - `reconciliation_runs` table: metadata per run (date, accounts, totals, flags)
 - Streamlit "History" tab showing past runs and their summaries
 - DB migration: `schema_version` table + `_migrate()` in `agent/db.py` for schema evolution
-
-**Planned:**
 - Query layer: filter transactions by date range, account, category, amount
 
 ---

@@ -5,6 +5,7 @@ Run with: streamlit run src/ui/app.py
 Requires the project to be installed (pip install -e .) so the agent package is importable.
 """
 
+import datetime
 import json
 import tempfile
 from pathlib import Path
@@ -423,6 +424,12 @@ def _render_low_confidence_review_panel(
 # ── Past runs (from DB) ───────────────────────────────────────────────────────
 
 
+@st.cache_data(ttl=60)
+def _cached_filter_values() -> dict[str, list[str]]:
+    """Return distinct accounts and categories from DB (cached 60 s)."""
+    return DatabaseService().get_distinct_filter_values()
+
+
 def render_past_runs() -> None:
     """Show past reconciliation runs from DB with summaries and drill-down to transactions."""
     db = DatabaseService()
@@ -450,6 +457,44 @@ def render_past_runs() -> None:
 
     st.subheader("Past reconciliation runs")
     st.caption("Click **View** to see transactions for a run.")
+
+    # ── Cross-run search ──────────────────────────────────────────────────
+    filter_vals = _cached_filter_values()
+    with st.expander("🔍 Search transactions across all runs"):
+        sc1, sc2, sc3, sc4 = st.columns(4)
+        with sc1:
+            s_date_from = st.date_input("Date from", value=None, key="s_date_from")
+            s_date_to = st.date_input("Date to", value=None, key="s_date_to")
+        with sc2:
+            s_accounts = st.multiselect("Account", filter_vals.get("accounts", []), key="s_accounts")
+        with sc3:
+            s_categories = st.multiselect("Category", filter_vals.get("categories", []), key="s_categories")
+        with sc4:
+            s_amt_min = st.number_input("Amount min", value=0.0, min_value=0.0, step=1.0, key="s_amt_min")
+            s_amt_max = st.number_input("Amount max", value=0.0, min_value=0.0, step=1.0, key="s_amt_max")
+
+        if st.button("Search", key="s_search", type="primary"):
+            results = db.query_transactions(
+                date_from=str(s_date_from) if s_date_from else None,
+                date_to=str(s_date_to) if s_date_to else None,
+                accounts=s_accounts or None,
+                categories=s_categories or None,
+                amount_min=s_amt_min if s_amt_min > 0 else None,
+                amount_max=s_amt_max if s_amt_max > 0 else None,
+            )
+            st.session_state["search_results"] = results
+
+        search_results = st.session_state.get("search_results")
+        if search_results is not None:
+            st.caption(f"Results: {len(search_results)} transaction(s)")
+            if search_results:
+                st.dataframe(
+                    _transactions_df(search_results).drop(columns=["_id"]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.info("No transactions match the selected filters.")
 
     for r in runs:
         run_id = r.get("run_id", "")
@@ -507,9 +552,42 @@ def _render_run_detail(run: dict[str, Any], db: DatabaseService) -> None:
         st.info("No transactions stored for this run.")
         return
 
-    st.subheader(f"Transactions ({len(transactions)})")
     df = _transactions_df(transactions)
-    st.dataframe(df.drop(columns=["_id"]), use_container_width=True, hide_index=True)
+
+    # ── In-memory filters ─────────────────────────────────────────────────
+    all_accounts = sorted({t.get("account", "") for t in transactions if t.get("account")})
+    all_categories = sorted({t.get("category", "") for t in transactions if t.get("category")})
+    all_dates = [t.get("date", "") for t in transactions if t.get("date")]
+    default_date_min = datetime.date.fromisoformat(min(all_dates)) if all_dates else datetime.date.today()
+    default_date_max = datetime.date.fromisoformat(max(all_dates)) if all_dates else datetime.date.today()
+    amounts = [t.get("amount_original", 0) for t in transactions]
+    default_amount_max = float(max(amounts)) if amounts else 0.0
+
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        date_from = st.date_input("Date from", value=default_date_min, key=f"rdf_{run_id}")
+        date_to = st.date_input("Date to", value=default_date_max, key=f"rdt_{run_id}")
+    with fc2:
+        acct_filter = st.multiselect("Account", all_accounts, key=f"rac_{run_id}")
+    with fc3:
+        cat_filter = st.multiselect("Category", all_categories, key=f"rca_{run_id}")
+    with fc4:
+        amt_min = st.number_input("Amount min", value=0.0, min_value=0.0, step=1.0, key=f"ramin_{run_id}")
+        amt_max = st.number_input("Amount max", value=default_amount_max, min_value=0.0, step=1.0, key=f"ramax_{run_id}")
+
+    filtered = df.copy()
+    filtered = filtered[filtered["Date"] >= str(date_from)]
+    filtered = filtered[filtered["Date"] <= str(date_to)]
+    if acct_filter:
+        filtered = filtered[filtered["Account"].isin(acct_filter)]
+    if cat_filter:
+        filtered = filtered[filtered["Category"].isin(cat_filter)]
+    filtered = filtered[filtered["Amount"] >= amt_min]
+    if amt_max > 0:
+        filtered = filtered[filtered["Amount"] <= amt_max]
+
+    st.subheader(f"Transactions ({len(filtered)} / {len(df)})")
+    st.dataframe(filtered.drop(columns=["_id"]), use_container_width=True, hide_index=True)
 
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────

@@ -151,11 +151,19 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
         conn.commit()
 
-    # Add future migrations here, e.g.:
-    # if current < 2:
-    #     conn.execute("ALTER TABLE ... ADD COLUMN ...")
-    #     conn.execute("INSERT INTO schema_version (version) VALUES (2)")
-    #     conn.commit()
+    if current < 2:
+        conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_transactions_date
+                ON transactions(date);
+            CREATE INDEX IF NOT EXISTS idx_transactions_account
+                ON transactions(account);
+            CREATE INDEX IF NOT EXISTS idx_transactions_category
+                ON transactions(category);
+            CREATE INDEX IF NOT EXISTS idx_transactions_run_date
+                ON transactions(run_id, date);
+        """)
+        conn.execute("INSERT INTO schema_version (version) VALUES (2)")
+        conn.commit()
 
 
 def get_checkpointer() -> SqliteSaver:
