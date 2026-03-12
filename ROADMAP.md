@@ -74,6 +74,35 @@ Currently the SQLite DB is the LangGraph checkpointer — it stores graph state,
 
 ---
 
+## v0.6 — Prompt Quality Improvements 🎯
+
+*Goal: fix accuracy problems in LLM prompts that cause receipts to be mis-parsed and income to be mis-classified.*
+
+Receipt images currently turn every line item into a separate transaction instead of extracting the total, and bank statement normalization has no debit/credit distinction — so income is misclassified as expenses throughout the pipeline.
+
+**Planned:**
+- Fix `ingest_images` vision prompt: extract receipt total + line items in one pass with `merchant`, `total` (amount/currency/type), `lines[]`, and `confidence` ([#35](https://github.com/leojg/financial-inteligence-agent/issues/35))
+- Fix `normalize` bank statement prompt: add `type` field (`debit`/`credit`), remove hardcoded currency hint ([#36](https://github.com/leojg/financial-inteligence-agent/issues/36))
+- Improve `categorize` prompt: include `type` in transaction list; steer credits toward income categories ([#37](https://github.com/leojg/financial-inteligence-agent/issues/37))
+- Pass `type` to `flag_suspicious` prompt; reference `type=credit` explicitly in "do not flag" rules ([#38](https://github.com/leojg/financial-inteligence-agent/issues/38))
+
+---
+
+## v0.7 — Database Architecture 🗄️
+
+*Goal: split the flat `transactions` table into a proper three-table schema and abstract the DB layer for multi-backend support.*
+
+The current `transactions` table cannot represent receipts (which have a total and N line items), and is tightly coupled to SQLite, making production deployments difficult.
+
+**Planned:**
+- Split into three tables: `statements` (bank rows), `receipts` (receipt totals), `receipt_lines` (line items FK → receipts) via DB migration version 2 ([#39](https://github.com/leojg/financial-inteligence-agent/issues/39))
+- Replace raw `sqlite3` with SQLAlchemy `Engine`; introduce `DATABASE_URL` env var supporting SQLite (default) and PostgreSQL ([#40](https://github.com/leojg/financial-inteligence-agent/issues/40))
+- Add missing indexes on `statements`: `date`, `account`, `category`, `(run_id, date)`
+- `generate_report` writes to `statements` or `receipts`/`receipt_lines` based on source type
+- LangGraph checkpointer keeps its own raw `sqlite3` connection — unchanged
+
+---
+
 ## v0.5 — Spending Intelligence & Financial Insights 📊
 
 *Goal: transform reconciliation results into actionable financial intelligence.*
