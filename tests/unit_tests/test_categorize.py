@@ -63,11 +63,12 @@ def test_categorize_assigns_categories_from_llm_response(
         {"id": "tx-001", "category": "Groceries"},
         {"id": "tx-002", "category": "Dining"},
     ]
-    with patch("agent.nodes.ChatOpenAI") as MockLLM:
-        mock_llm_instance = MockLLM.return_value
-        mock_llm_instance.invoke.return_value.content = json.dumps(mock_response)
-        categorize = make_categorize_node(config)
-        result = categorize(state_with_transactions)
+    with patch("agent.services.database_service.DatabaseService.get_merchant_category", return_value=None):
+        with patch("agent.nodes.ChatOpenAI") as MockLLM:
+            mock_llm_instance = MockLLM.return_value
+            mock_llm_instance.invoke.return_value.content = json.dumps(mock_response)
+            categorize = make_categorize_node(config)
+            result = categorize(state_with_transactions)
 
     assert "transactions" in result
     out = result["transactions"]
@@ -86,11 +87,12 @@ def test_categorize_marks_needs_review_when_llm_returns_null(
         {"id": "tx-001", "category": "Groceries"},
         {"id": "tx-002", "category": None},
     ]
-    with patch("agent.nodes.ChatOpenAI") as MockLLM:
-        mock_llm_instance = MockLLM.return_value
-        mock_llm_instance.invoke.return_value.content = json.dumps(mock_response)
-        categorize = make_categorize_node(config)
-        result = categorize(state_with_transactions)
+    with patch("agent.services.database_service.DatabaseService.get_merchant_category", return_value=None):
+        with patch("agent.nodes.ChatOpenAI") as MockLLM:
+            mock_llm_instance = MockLLM.return_value
+            mock_llm_instance.invoke.return_value.content = json.dumps(mock_response)
+            categorize = make_categorize_node(config)
+            result = categorize(state_with_transactions)
 
     out = result["transactions"]
     assert out[0].category == "Groceries"
@@ -104,11 +106,12 @@ def test_categorize_marks_batch_needs_review_on_json_error(
     config, state_with_transactions
 ):
     """LLM returns invalid JSON; batch is marked needs_review with batch failed reason."""
-    with patch("agent.nodes.ChatOpenAI") as MockLLM:
-        mock_llm_instance = MockLLM.return_value
-        mock_llm_instance.invoke.return_value.content = "not valid json"
-        categorize = make_categorize_node(config)
-        result = categorize(state_with_transactions)
+    with patch("agent.services.database_service.DatabaseService.get_merchant_category", return_value=None):
+        with patch("agent.nodes.ChatOpenAI") as MockLLM:
+            mock_llm_instance = MockLLM.return_value
+            mock_llm_instance.invoke.return_value.content = "not valid json"
+            categorize = make_categorize_node(config)
+            result = categorize(state_with_transactions)
 
     out = result["transactions"]
     assert len(out) == 2

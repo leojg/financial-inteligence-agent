@@ -61,7 +61,7 @@ def state_one_raw_doc(raw_doc_single):
 def test_normalize_empty_raw_documents_returns_empty_transactions(config):
     """No raw_documents yields empty transactions list."""
     state = _base_state([])
-    with patch("agent.nodes.get_connection") as mock_get_conn:
+    with patch("agent.services.database_service.get_connection") as mock_get_conn:
         mock_get_conn.return_value = sqlite3.connect(":memory:")
         ensure_schema(mock_get_conn.return_value)
         normalize = make_normalize_node(config)
@@ -92,7 +92,7 @@ def test_normalize_cache_hit_returns_cached_transactions_no_llm(
     )
     in_memory_db.commit()
 
-    with patch("agent.nodes.get_connection", return_value=in_memory_db):
+    with patch("agent.services.database_service.get_connection", return_value=in_memory_db):
         with patch("agent.nodes.ChatOpenAI") as MockLLM:
             normalize = make_normalize_node(config)
             result = normalize(state_one_raw_doc)
@@ -120,7 +120,7 @@ def test_normalize_cache_miss_calls_llm_and_writes_cache(
             "source_file": "data/account.xlsx",
         }
     ]
-    with patch("agent.nodes.get_connection", return_value=in_memory_db):
+    with patch("agent.services.database_service.get_connection", return_value=in_memory_db):
         with patch("agent.nodes.ChatOpenAI") as MockLLM:
             with patch("agent.nodes.uuid.uuid4", return_value=UUID("00000000-0000-0000-0000-000000000001")):
                 mock_llm_instance = MockLLM.return_value
@@ -150,7 +150,7 @@ def test_normalize_cache_miss_calls_llm_and_writes_cache(
 
 def test_normalize_invalid_json_skips_doc_continues(config, in_memory_db, state_one_raw_doc):
     """LLM returns invalid JSON; that doc is skipped, no exception, transactions empty or partial."""
-    with patch("agent.nodes.get_connection", return_value=in_memory_db):
+    with patch("agent.services.database_service.get_connection", return_value=in_memory_db):
         with patch("agent.nodes.ChatOpenAI") as MockLLM:
             mock_llm_instance = MockLLM.return_value
             mock_llm_instance.invoke.return_value = MagicMock(content="not valid json")
@@ -183,7 +183,7 @@ def test_normalize_accepts_dict_raw_documents(config, in_memory_db):
     )
     in_memory_db.commit()
 
-    with patch("agent.nodes.get_connection", return_value=in_memory_db):
+    with patch("agent.services.database_service.get_connection", return_value=in_memory_db):
         normalize = make_normalize_node(config)
         result = normalize(state)
 
