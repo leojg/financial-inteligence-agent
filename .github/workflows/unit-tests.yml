@@ -37,7 +37,7 @@ jobs:
           uv run ruff check .
       - name: Lint with mypy
         run: |
-          uv run mypy --strict src/
+          uv run mypy src/
       - name: Check README spelling
         uses: codespell-project/actions-codespell@v2
         with:

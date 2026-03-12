@@ -38,7 +38,7 @@ class ExchangeService:
                     "from": from_currency,
                     "to": to_currency,
                     "date": date,
-                    "amount": 1,
+                    "amount": "1",
                 },
             )
             response.raise_for_status()

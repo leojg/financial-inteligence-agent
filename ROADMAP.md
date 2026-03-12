@@ -40,7 +40,7 @@ The core pipeline works but is not yet presentable. This version focuses on reli
 
 ---
 
-## v0.3 — Document OCR Ingestion 🔧
+## v0.3 — Document OCR Ingestion ✅
 
 *Goal: accept real-world bank statements and reciepts as images, not just clean CSVs. and PDFs*
 
@@ -67,10 +67,10 @@ Currently the SQLite DB is the LangGraph checkpointer — it stores graph state,
 - Post-run data written to business DB from `generate_report` node
 - `reconciliation_runs` table: metadata per run (date, accounts, totals, flags)
 - Streamlit "History" tab showing past runs and their summaries
-cC
+- DB migration: `schema_version` table + `_migrate()` in `agent/db.py` for schema evolution
+
 **Planned:**
 - Query layer: filter transactions by date range, account, category, amount
-- DB migration strategy for schema evolution
 
 ---
 

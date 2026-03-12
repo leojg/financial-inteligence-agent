@@ -56,6 +56,18 @@ lint.ignore = [
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = [
+    "langchain_community.*",
+    "langchain_anthropic",
+    "langchain_openai",
+    "streamlit",
+    "langgraph.checkpoint.sqlite",
+]
+ignore_missing_imports = true
+
 [dependency-groups]
 dev = [
     "anyio>=4.7.0",

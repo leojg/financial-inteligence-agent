@@ -130,8 +130,32 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             reason TEXT,
             PRIMARY KEY (fingerprint_a, fingerprint_b)
         );
+
+        CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER PRIMARY KEY
+        );
     """)
     conn.commit()
+    _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Run pending migrations in order. Each migration N runs when current version < N."""
+    cur = conn.execute("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1")
+    row = cur.fetchone()
+    cur.close()
+    current = row[0] if row else 0
+
+    if current < 1:
+        # Migration 1: bootstrap (schema already created by ensure_schema)
+        conn.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
+        conn.commit()
+
+    # Add future migrations here, e.g.:
+    # if current < 2:
+    #     conn.execute("ALTER TABLE ... ADD COLUMN ...")
+    #     conn.execute("INSERT INTO schema_version (version) VALUES (2)")
+    #     conn.commit()
 
 
 def get_checkpointer() -> SqliteSaver:
