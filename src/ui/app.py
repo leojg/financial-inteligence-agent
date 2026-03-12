@@ -20,9 +20,9 @@ load_dotenv()
 import pandas as pd  # type: ignore[import-untyped]  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from agent.configuration import DEFAULT_CONFIG  # noqa: E402
-from agent.db import get_checkpointer  # noqa: E402
-from agent.services.database_service import DatabaseService  # noqa: E402
+from agents.reconciliator.configuration import DEFAULT_CONFIG  # noqa: E402
+from shared.db import get_checkpointer  # noqa: E402
+from shared.services.database_service import DatabaseService  # noqa: E402
 
 # --- Page config ---
 st.set_page_config(
@@ -113,8 +113,8 @@ def _process_uploads(uploaded_files: list[Any]) -> list[str]:
 def _get_graph() -> Any:
     """Return the compiled graph instance, creating it with checkpointer if needed."""
     if st.session_state.graph_instance is None:
-        from agent.configuration import DEFAULT_CONFIG
-        from agent.graph import make_graph
+        from agents.reconciliator.configuration import DEFAULT_CONFIG
+        from agents.reconciliator.graph import make_graph
 
         if "checkpointer" not in st.session_state:
             st.session_state.checkpointer = get_checkpointer()
@@ -263,7 +263,7 @@ def _run_graph(source_paths: list[str]) -> None:
         st.error("Add at least one folder or file.")
         return
 
-    from agent.state import initial_state
+    from agents.reconciliator.state import initial_state
 
     graph = _get_graph()
     config = {"configurable": {"thread_id": st.session_state.thread_id}}

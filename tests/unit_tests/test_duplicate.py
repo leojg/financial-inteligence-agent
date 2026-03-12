@@ -1,8 +1,8 @@
 import pytest
 
-from agent.configuration import DEFAULT_CONFIG
-from agent.nodes import make_detect_duplicates_node
-from agent.state import Transaction
+from agents.reconciliator.configuration import DEFAULT_CONFIG
+from agents.reconciliator.nodes import make_detect_duplicates_node
+from shared.models import Transaction
 
 
 def _base_state(transactions):

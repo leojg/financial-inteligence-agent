@@ -8,7 +8,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from agent.db import get_connection
+from shared.db import get_connection
 
 
 def _now() -> str:

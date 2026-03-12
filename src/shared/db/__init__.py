@@ -15,8 +15,8 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 _CHECKPOINT_SERDE = JsonPlusSerializer(
     allowed_json_modules=(
-        ("agent.state", "RawDocument"),
-        ("agent.state", "Transaction"),
+        ("shared.models", "RawDocument"),
+        ("shared.models", "Transaction"),
     ),
 )
 
@@ -168,7 +168,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
 
 def get_checkpointer() -> SqliteSaver:
     """Return a SqliteSaver using a dedicated checkpoint connection (same DB file, WAL mode).
-    
+
     Avoids SystemError when fan-out runs multiple threads writing checkpoints.
     """
     return SqliteSaver(_get_checkpoint_connection(), serde=_CHECKPOINT_SERDE)

@@ -5,7 +5,7 @@ import os
 
 import requests  # type: ignore[import-untyped]
 
-from agent.db import get_connection
+from shared.db import get_connection
 
 logger = logging.getLogger(__name__)
 

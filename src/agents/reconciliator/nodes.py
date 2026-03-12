@@ -15,11 +15,12 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
-from agent.configuration import ReconciliationConfig
-from agent.services.database_service import DatabaseService
-from agent.services.exchange_service import ExchangeService
-from agent.state import RawDocument, ReconciliationState, Transaction
-from agent.utils.parsers import load_documents
+from agents.reconciliator.configuration import ReconciliationConfig
+from agents.reconciliator.state import ReconciliationState
+from agents.reconciliator.utils.parsers import load_documents
+from shared.models import RawDocument, Transaction
+from shared.services.database_service import DatabaseService
+from shared.services.exchange_service import ExchangeService
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
 
         msg_content.append({
             "type": "text",
-            "text": """Extract all line items and totals from this receipt. 
+            "text": """Extract all line items and totals from this receipt.
             Include the date, amount and description of the charges.
             Also include currency if present, it it's not present, do not include it.
             Include a confidence score for each transaction between 0 and 1.
@@ -317,7 +318,7 @@ def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[Reconc
         for t in state["transactions"]:
             if isinstance(t, dict):
                 t = Transaction(**t)
-            
+
             if t.currency == config.base_currency:
                 t = t.model_copy(
                     update={
@@ -343,14 +344,14 @@ def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[Reconc
 
                 amount_base = round(t.amount_original * rate, 2) if rate else None
                 t = t.model_copy(update={"amount_base": amount_base})
-            
+
             transactions.append(t)
-        
+
         return {
             "transactions": transactions,
             "exchange_rates": exchange_rates
         }
-    
+
     return convert_currency
 
 

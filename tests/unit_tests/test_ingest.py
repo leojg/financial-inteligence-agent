@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agent.nodes import ingest
+from agents.reconciliator.nodes import ingest
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def minimal_state():
 def test_ingest_returns_raw_documents_from_loaded_files(
     minimal_state, mock_documents
 ):
-    with patch("agent.nodes.load_documents", return_value=mock_documents):
+    with patch("agents.reconciliator.nodes.load_documents", return_value=mock_documents):
         result = ingest(minimal_state)
 
     assert "raw_documents" in result
@@ -55,7 +55,7 @@ def test_ingest_returns_raw_documents_from_loaded_files(
 def test_ingest_calls_load_documents_with_source_files(
     minimal_state, mock_documents
 ):
-    with patch("agent.nodes.load_documents", return_value=mock_documents) as load:
+    with patch("agents.reconciliator.nodes.load_documents", return_value=mock_documents) as load:
         ingest(minimal_state)
     load.assert_called_once()
     call_arg = load.call_args[0][0]
@@ -64,6 +64,6 @@ def test_ingest_calls_load_documents_with_source_files(
 
 def test_ingest_empty_folder_returns_empty_raw_documents(minimal_state):
     state = {**minimal_state, "source_files": []}
-    with patch("agent.nodes.load_documents", return_value=[]):
+    with patch("agents.reconciliator.nodes.load_documents", return_value=[]):
         result = ingest(state)
     assert result["raw_documents"] == []

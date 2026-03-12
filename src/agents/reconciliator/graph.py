@@ -7,8 +7,8 @@ from typing import Any, Callable
 
 from langgraph.graph import END, START, StateGraph
 
-from agent.configuration import DEFAULT_CONFIG, ReconciliationConfig
-from agent.nodes import (
+from agents.reconciliator.configuration import DEFAULT_CONFIG, ReconciliationConfig
+from agents.reconciliator.nodes import (
     generate_report,
     human_review,
     ingest,
@@ -22,7 +22,7 @@ from agent.nodes import (
     passthrough,
     prepare_ingest,
 )
-from agent.state import ReconciliationState
+from agents.reconciliator.state import ReconciliationState
 
 
 def _has_images(state: ReconciliationState) -> str:
@@ -113,15 +113,15 @@ def make_graph(
         },
     )
     graph.add_edge("review_low_confidence_transactions", "convert_currency")
-    
+
     graph.add_edge("convert_currency", "categorize")
-    
+
     graph.add_edge("categorize", "detect_duplicates")
     graph.add_edge("categorize", "flag_suspicious")
-    
+
     graph.add_edge("detect_duplicates", "human_review")
     graph.add_edge("flag_suspicious", "human_review")
-    
+
     graph.add_edge("human_review", "generate_report")
     graph.add_edge("generate_report", END)
 
