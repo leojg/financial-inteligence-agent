@@ -165,6 +165,19 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("INSERT INTO schema_version (version) VALUES (2)")
         conn.commit()
 
+    if current < 3:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS user_goals (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                content   TEXT NOT NULL,
+                active    INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+        """)
+        conn.execute("INSERT INTO schema_version (version) VALUES (3)")
+        conn.commit()
+
 
 def get_checkpointer() -> SqliteSaver:
     """Return a SqliteSaver using a dedicated checkpoint connection (same DB file, WAL mode).
