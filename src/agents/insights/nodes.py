@@ -1,3 +1,13 @@
+from __future__ import annotations
+import json
+from typing import Callable
+from langchain_openai import ChatOpenAI
+from shared.services.database_service import DatabaseService
+from agents.insights.state import InsightsState
+from agents.insights.configuration import InsightsConfig
+from shared.models import InsightsOutput
+from agents.insights.tools import get_spending_by_category, get_month_over_month_deltas, get_recurring_charges, get_transfer_fees_summary
+
 def load_context(state: InsightsState) -> InsightsState:
     """Load the context for the insights agent."""
     database_service = DatabaseService()
@@ -106,7 +116,7 @@ def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsSta
             Spending data:
             {json.dumps(state["aggregations"], indent=2)}
 
-            For habits: identify recurring behavioral patterns — both positive and negative.
+            For habits: only include patterns that are either notably positive (worth reinforcing) or concerning (worth addressing). Skip neutral observations.
             For suggestions: provide specific, actionable recommendations with concrete numbers from the data.
             Severity guide: info = noteworthy, warning = needs attention, critical = requires immediate action.
         """

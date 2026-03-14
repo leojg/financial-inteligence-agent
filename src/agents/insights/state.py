@@ -23,3 +23,15 @@ def initial_insights_state(
     accounts: list[str] | None = None,
     force_recompute: bool = False,
 ) -> InsightsState:
+    """Return initial state for the insights graph. load_context will set cache_valid and optional cached data."""
+    return {
+        "date_from": date_from,
+        "date_to": date_to,
+        "accounts": accounts,
+        "force_recompute": force_recompute,
+        "cache_valid": False,
+        "goals_prompt": None,
+        "aggregations": None,
+        "habits": None,
+        "suggestions": None,
+    }

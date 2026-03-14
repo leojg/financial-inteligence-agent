@@ -566,6 +566,29 @@ class DatabaseService:
             "suggestions": json.loads(row[2]),
         }
 
+    def get_latest_insights_cache(self) -> dict[str, Any] | None:
+        """Return the most recent cached insights (by created_at), or None if the cache is empty."""
+        conn = get_connection()
+        cur = conn.execute(
+            """
+            SELECT date_from, date_to, aggregations_json, habits_json, suggestions_json
+            FROM insights_cache
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        cur.close()
+        if row is None:
+            return None
+        return {
+            "date_from": str(row[0]),
+            "date_to": str(row[1]),
+            "aggregations": json.loads(row[2]),
+            "habits": json.loads(row[3]),
+            "suggestions": json.loads(row[4]),
+        }
+
     def save_insights_cache(
         self,
         date_from: str,
@@ -693,4 +716,4 @@ class DatabaseService:
         cur = conn.execute(sql)
         row = cur.fetchone()
         cur.close()
-        return row["latest_completed"] if row and row["latest_completed"] is not None else None
+        return str(row[0]) if row and row[0] is not None else None

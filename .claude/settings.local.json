@@ -3,7 +3,32 @@
     "allow": [
       "Bash(gh api:*)",
       "Bash(gh auth:*)",
-      "Bash(gh issue create:*)"
+      "Bash(gh issue create:*)",
+      "Bash(git -C /Users/leojg/Dev/financial-inteligence-agent remote get-url origin 2>&1)",
+      "Bash(gh issue list --repo leojg/financial-inteligence-agent 2>&1)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(venv/bin/mypy --strict src/ 2>&1)",
+      "Bash(find /Users/leojg/Dev/financial-inteligence-agent -type f \\\\\\( -name \"*alembic*\" -o -name \"*migration*\" -o -name \"*.migration\" -o -name \"versions\" -type d \\\\\\) 2>/dev/null | head -20)",
+      "Bash(gh milestone list)",
+      "Bash(which gh || brew list gh 2>/dev/null || echo \"gh not found\")",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\" && which gh && gh --version)",
+      "Bash(brew install gh 2>&1 | tail -5)",
+      "Bash(/opt/homebrew/bin/gh auth status 2>&1)",
+      "Bash(/opt/homebrew/bin/gh milestone list --repo leojg/financial-inteligence-agent 2>&1)",
+      "Bash(/opt/homebrew/bin/gh api repos/leojg/financial-inteligence-agent/milestones 2>&1 | python3 -c \"import sys,json; ms=json.load\\(sys.stdin\\); [print\\(m['number'], m['title']\\) for m in ms]\")",
+      "Bash(/opt/homebrew/bin/gh api repos/leojg/financial-inteligence-agent/milestones \\\\\n  --method POST \\\\\n  --field title=\"v0.6 Prompt Quality Improvements\" \\\\\n  --field description=\"Fix accuracy problems in LLM prompts: receipts treating line items as transactions, income/charge confusion, and missing transaction type context.\" \\\\\n  2>&1 | python3 -c \"import sys,json; m=json.load\\(sys.stdin\\); print\\(m['number'], m['title']\\)\")",
+      "Bash(/opt/homebrew/bin/gh api repos/leojg/financial-inteligence-agent/milestones \\\\\n  --method POST \\\\\n  --field title=\"v0.7 Database Architecture\" \\\\\n  --field description=\"Improve DB schema: split into three tables \\(statements, receipts, receipt_lines\\) and abstract the business DB for multi-backend support \\(SQLAlchemy + PostgreSQL\\).\" \\\\\n  2>&1 | python3 -c \"import sys,json; m=json.load\\(sys.stdin\\); print\\(m['number'], m['title']\\)\")",
+      "Bash(python -m py_compile src/agent/db.py src/agent/services/database_service.py src/ui/app.py && echo \"OK\")",
+      "Bash(which uv:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest tests/ -x -q 2>&1)",
+      "Bash(python -c \"from agents.insights import graph; print\\('OK:', graph\\)\" 2>&1)",
+      "Bash(cd /Users/leojg/Dev/financial-inteligence-agent/src && python -c \"from shared.services.database_service import DatabaseService; print\\('OK'\\)\")",
+      "Bash(cd /Users/leojg/Dev/financial-inteligence-agent && python -m pytest tests/ -q 2>&1 | tail -20)",
+      "Bash(cd /Users/leojg/Dev/financial-inteligence-agent/src && python -c \"\nimport tempfile, os, sqlite3\nos.environ['FINANCE_AGENT_DB_PATH'] = tempfile.mktemp\\(suffix='.db'\\)\nfrom shared.db import get_connection\nconn = get_connection\\(\\)\ncur = conn.execute\\(\\\\\"SELECT name FROM sqlite_master WHERE type='table' AND name='user_goals'\\\\\"\\)\nprint\\('user_goals table:', cur.fetchone\\(\\)\\)\ncur = conn.execute\\('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1'\\)\nprint\\('schema_version:', cur.fetchone\\(\\)\\)\n\")",
+      "Bash(tree /Users/leojg/Dev/financial-inteligence-agent/src/agents/insights -I \"__pycache__\" 2>/dev/null || find /Users/leojg/Dev/financial-inteligence-agent/src/agents/insights -not -path \"*__pycache__*\" -type f | sort)",
+      "Bash(tree /Users/leojg/Dev/financial-inteligence-agent/src/shared/services -I \"__pycache__\" 2>/dev/null || find /Users/leojg/Dev/financial-inteligence-agent/src/shared/services -not -path \"*__pycache__*\" -type f | sort)",
+      "Bash(cd /Users/leojg/Dev/financial-inteligence-agent/src && python -c \"\nfrom shared.services.database_service import DatabaseService\nfrom agents.insights import tools\nprint\\('OK'\\)\n\")"
     ]
   }
 }

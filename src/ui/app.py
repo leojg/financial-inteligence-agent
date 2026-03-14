@@ -6,6 +6,7 @@ Requires the project to be installed (pip install -e .) so the agent package is 
 """
 
 import datetime
+import html
 import json
 import tempfile
 from pathlib import Path
@@ -47,6 +48,9 @@ st.markdown("""
     .flag-duplicate  { color: #d97706; font-weight: 600; }
     .flag-review     { color: #2563eb; font-weight: 600; }
     .flag-ok         { color: #16a34a; }
+    .severity-critical { color: #dc2626; font-weight: 600; }
+    .severity-warning  { color: #d97706; font-weight: 600; }
+    .severity-info     { color: #2563eb; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -68,6 +72,8 @@ def _init_session() -> None:
         "upload_dir": None,        # temp dir for uploaded files (created on first upload)
         "past_runs_selected_run_id": None,  # run_id for drill-down in Past runs
         "pending_resume": False,  # True when Resume was clicked; agent will run this cycle, button disabled
+        "insights_state": None,       # last insights result (aggregations, habits, suggestions, date_from, date_to)
+        "insights_graph_instance": None,  # cached compiled insights graph
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -110,8 +116,8 @@ def _process_uploads(uploaded_files: list[Any]) -> list[str]:
     return new_paths
 
 
-def _get_graph() -> Any:
-    """Return the compiled graph instance, creating it with checkpointer if needed."""
+def _get_reconciliation_graph() -> Any:
+    """Return the compiled reconciliation graph instance, creating it with checkpointer if needed."""
     if st.session_state.graph_instance is None:
         from agents.reconciliator.configuration import DEFAULT_CONFIG
         from agents.reconciliator.graph import make_graph
@@ -124,6 +130,54 @@ def _get_graph() -> Any:
             checkpointer=st.session_state.checkpointer
         )
     return st.session_state.graph_instance
+
+
+def _get_insights_graph() -> Any:
+    """Return the compiled insights graph instance, creating and caching it if needed."""
+    if st.session_state.insights_graph_instance is None:
+        from agents.insights.graph import make_graph
+
+        st.session_state.insights_graph_instance = make_graph(checkpointer=None)
+    return st.session_state.insights_graph_instance
+
+
+def _run_insights_graph(
+    date_from: datetime.date | None,
+    date_to: datetime.date | None,
+    accounts: list[str] | None,
+    force_recompute: bool,
+) -> None:
+    """Run the insights graph and store the result in session state."""
+    from agents.insights.state import initial_insights_state
+
+    db = DatabaseService()
+    if db.get_transaction_date_range(accounts) is None:
+        st.error("No transactions found in the database. Run a reconciliation first.")
+        return
+
+    graph = _get_insights_graph()
+    config = {"configurable": {"thread_id": "insights-1"}}
+    date_from_str = str(date_from) if date_from else None
+    date_to_str = str(date_to) if date_to else None
+    initial = initial_insights_state(
+        date_from=date_from_str,
+        date_to=date_to_str,
+        accounts=accounts or None,
+        force_recompute=force_recompute,
+    )
+    with st.spinner("Running insights agent…"):
+        try:
+            result = graph.invoke(initial, config=config)
+            st.session_state.insights_state = {
+                "date_from": result.get("date_from"),
+                "date_to": result.get("date_to"),
+                "aggregations": result.get("aggregations"),
+                "habits": result.get("habits") or [],
+                "suggestions": result.get("suggestions") or [],
+            }
+            st.rerun()
+        except Exception as e:
+            st.error(f"Insights agent error: {e}")
 
 
 def _parse_source_paths(raw: Any) -> list[str]:
@@ -265,7 +319,7 @@ def _run_graph(source_paths: list[str]) -> None:
 
     from agents.reconciliator.state import initial_state
 
-    graph = _get_graph()
+    graph = _get_reconciliation_graph()
     config = {"configurable": {"thread_id": st.session_state.thread_id}}
 
     with st.spinner("Running reconciliation agent…"):
@@ -293,7 +347,7 @@ def _run_graph(source_paths: list[str]) -> None:
 
 
 def _resume_graph() -> None:
-    graph = _get_graph()
+    graph = _get_reconciliation_graph()
     config = {"configurable": {"thread_id": st.session_state.thread_id}}
     snapshot = graph.get_state(config)
     next_nodes = getattr(snapshot, "next", None) or ()
@@ -808,6 +862,101 @@ def render_main() -> None:
                 st.info("Report will appear here after the agent completes.")
 
 
+# ── Insights tab ─────────────────────────────────────────────────────────────
+
+_SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
+
+
+def _render_insights_dashboard(state: dict[str, Any]) -> None:
+    """Render Statistics, Spending habits, and Observations sections from insights state."""
+    aggregations = state.get("aggregations") or {}
+    habits = state.get("habits") or []
+    suggestions = state.get("suggestions") or []
+
+    st.subheader("Statistics")
+    st.text(json.dumps(aggregations, indent=2))
+
+    st.subheader("Spending habits")
+    if not habits:
+        st.caption("No habits identified.")
+    else:
+        sorted_habits = sorted(habits, key=lambda h: _SEVERITY_ORDER.get(h.get("severity", "info"), 2))
+        lines = []
+        for h in sorted_habits:
+            sev = h.get("severity", "info")
+            cat = html.escape(str(h.get("category", "")))
+            obs = html.escape(str(h.get("observation", "")))
+            lines.append(f'<li class="severity-{sev}"><strong>{cat}</strong> {obs}</li>')
+        st.markdown(f"<ul>{''.join(lines)}</ul>", unsafe_allow_html=True)
+
+    st.subheader("Observations")
+    if not suggestions:
+        st.caption("No observations.")
+    else:
+        sorted_suggestions = sorted(suggestions, key=lambda s: _SEVERITY_ORDER.get(s.get("severity", "info"), 2))
+        lines = []
+        for s in sorted_suggestions:
+            sev = s.get("severity", "info")
+            title = html.escape(str(s.get("title", "")))
+            body = html.escape(str(s.get("body", "")))
+            lines.append(f'<li class="severity-{sev}"><strong>{title}</strong> — {body}</li>')
+        st.markdown(f"<ul>{''.join(lines)}</ul>", unsafe_allow_html=True)
+
+    with st.expander("Chat (coming soon)"):
+        st.caption("Chat with your insights will be available here in a future update.")
+
+
+def render_insights_tab() -> None:
+    """Render the Insights tab: run controls, optional load cached, dashboard, chat placeholder."""
+    # When no insights in session, show latest cache if one exists
+    if st.session_state.insights_state is None:
+        latest = DatabaseService().get_latest_insights_cache()
+        if latest is not None:
+            st.session_state.insights_state = latest
+            st.rerun()
+
+    filter_vals = _cached_filter_values()
+    accounts_options = filter_vals.get("accounts", [])
+
+    st.subheader("Insights")
+    st.caption("Run the insights agent to see statistics, spending habits, and observations. Optionally load cached results.")
+
+    date_from = st.date_input("Date from", value=None, key="insights_date_from")
+    date_to = st.date_input("Date to", value=None, key="insights_date_to")
+    accounts = st.multiselect("Accounts", options=accounts_options, default=None, key="insights_accounts")
+    force_recompute = st.checkbox("Force recompute", value=False, key="insights_force_recompute")
+    col_run, col_load = st.columns(2)
+    with col_run:
+        if st.button("Run Insights", type="primary", key="insights_run_btn"):
+            _run_insights_graph(date_from, date_to, accounts or None, force_recompute)
+    with col_load:
+        if st.button("Load cached insights", key="insights_load_btn"):
+            if date_from is None or date_to is None:
+                st.warning("Select both Date from and Date to to load cached insights.")
+            else:
+                db = DatabaseService()
+                cached = db.get_insights_cache(str(date_from), str(date_to), accounts or None)
+                if cached is None:
+                    st.warning("No cached insights for this date range and accounts.")
+                else:
+                    st.session_state.insights_state = {
+                        "date_from": str(date_from),
+                        "date_to": str(date_to),
+                        "aggregations": cached["aggregations"],
+                        "habits": cached.get("habits") or [],
+                        "suggestions": cached.get("suggestions") or [],
+                    }
+                    st.rerun()
+
+    st.markdown("---")
+
+    state = st.session_state.insights_state
+    if state is None:
+        st.info("Run the insights agent or load cached insights to see the dashboard.")
+    else:
+        _render_insights_dashboard(state)
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 
@@ -821,11 +970,13 @@ def main() -> None:
         _resume_graph()
         return
 
-    tab_run, tab_past = st.tabs(["Run reconciliation", "Past runs"])
+    tab_run, tab_past, tab_insights = st.tabs(["Run reconciliation", "Past runs", "Insights"])
     with tab_run:
         render_main()
     with tab_past:
         render_past_runs()
+    with tab_insights:
+        render_insights_tab()
 
 
 if __name__ == "__main__":
