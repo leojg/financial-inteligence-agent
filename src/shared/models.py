@@ -1,6 +1,7 @@
 """Shared data models used across agents."""
 
 from pydantic import BaseModel
+from typing import Literal
 
 
 class Transaction(BaseModel):
@@ -31,3 +32,26 @@ class RawDocument(BaseModel):
     file_type: str
     content: str  # raw text for pdf, markdown table for xlsx
     confidence: float | None = None # Confidence score for the image document
+
+class Habit(BaseModel):
+    """A habit detected in the spending data."""
+    
+    category: str
+    observation: str
+    severity: Literal["info", "warning", "critical"]
+
+
+class Suggestion(BaseModel):
+    """A suggestion for the user to improve their spending habits."""
+    
+    type: str
+    title: str
+    body: str
+    severity: Literal["info", "warning", "critical"]
+
+
+class InsightsOutput(BaseModel):
+    """The output of the insights agent."""
+    
+    habits: list[Habit]
+    suggestions: list[Suggestion]

@@ -10,6 +10,8 @@ the ReAct loop. The @tool decorator is transparent in both contexts.
 
 from __future__ import annotations
 
+import statistics
+from collections import defaultdict
 from typing import Any
 
 from langchain_core.tools import tool
@@ -49,27 +51,36 @@ def get_month_over_month_deltas(
     date_to: str,
     lookback_months: int = 3,
     accounts: list[str] | None = None,
-) -> dict[str, list[dict[str, Any]]]:
-    """Return per-category monthly spending with delta vs prior month and vs baseline average.
+) -> list[dict[str, Any]]:
+    """Return monthly spending with delta vs prior month and vs baseline average.
 
-    The baseline is computed from the lookback window prior to date_from.
-    Use this to detect upward or downward trends per category.
+    Use this to detect upward or downward trends in overall spending.
 
     Args:
         date_from: Start date inclusive, format YYYY-MM-DD.
         date_to: End date inclusive, format YYYY-MM-DD.
-        lookback_months: Months before date_from used to compute the baseline average.
+        lookback_months: Months used to compute the rolling baseline average.
         accounts: Optional list of account names to restrict the query.
 
     Returns:
-        Dict mapping category to list of monthly records.
-        Each record: {month, total, delta_pct, avg_baseline}.
+        List of monthly records: {month, total, delta_pct, avg_baseline}.
         delta_pct is None for the first month (no prior month to compare).
-        avg_baseline is None when no lookback data exists for the category.
+        avg_baseline is None when no lookback data exists.
     """
-    return DatabaseService().get_month_over_month_deltas(
-        date_from, date_to, lookback_months, accounts
-    )
+    rows = DatabaseService().get_monthly_spend(date_from, date_to, accounts)
+    result = []
+    for i, row in enumerate(rows):
+        prior = rows[i - 1]["total"] if i > 0 else None
+        delta_pct = ((row["total"] - prior) / prior * 100) if prior else None
+        lookback = rows[max(0, i - lookback_months):i]
+        avg_baseline = sum(r["total"] for r in lookback) / len(lookback) if lookback else None
+        result.append({
+            "month": row["month"],
+            "total": row["total"],
+            "delta_pct": round(delta_pct, 2) if delta_pct is not None else None,
+            "avg_baseline": round(avg_baseline, 2) if avg_baseline is not None else None,
+        })
+    return result
 
 
 @tool
@@ -90,10 +101,30 @@ def get_recurring_charges(
         accounts: Optional list of account names to restrict the query.
 
     Returns:
-        List of {merchant, merchant_normalized, category, avg_amount, months_detected, total},
-        sorted by total descending.
+        List of {merchant_normalized, months_seen, avg_amount, cv},
+        sorted by avg_amount descending.
     """
-    return DatabaseService().get_recurring_charges(date_from, date_to, accounts)
+    rows = DatabaseService().get_merchant_monthly_spend(date_from, date_to, accounts)
+    by_merchant: dict[str, list[float]] = defaultdict(list)
+    for row in rows:
+        by_merchant[row["merchant_normalized"]].append(row["total"])
+    result = []
+    for merchant, monthly_totals in by_merchant.items():
+        if len(monthly_totals) < 2:
+            continue
+        mean = sum(monthly_totals) / len(monthly_totals)
+        if mean == 0:
+            continue
+        cv = statistics.stdev(monthly_totals) / mean if len(monthly_totals) > 1 else 0.0
+        if cv <= 0.10:
+            result.append({
+                "merchant_normalized": merchant,
+                "months_seen": len(monthly_totals),
+                "avg_amount": round(mean, 2),
+                "cv": round(cv, 4),
+            })
+    result.sort(key=lambda x: x["avg_amount"], reverse=True)
+    return result
 
 
 @tool

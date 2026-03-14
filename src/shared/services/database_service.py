@@ -1,12 +1,10 @@
-"""Persistence service for normalized_document_cache, merchant_categories, duplicate_pairs, runs, and transactions."""
+"""Persistence service for normalized_document_cache, merchant_categories, duplicate_pairs, runs, transactions, user_goals, and insights_cache."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import re
-import statistics
-from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -323,24 +321,21 @@ class DatabaseService:
         cur.close()
         return result
 
-    def upsert_goal(self, content: str, goal_id: int | None = None) -> int:
-        """Insert a new goal (goal_id=None) or update an existing one. Returns the goal id."""
+    def upsert_goal(self, content: str, goal_id: int | None = None) -> None:
+        """Insert a new goal (goal_id=None) or update an existing one."""
         conn = get_connection()
         now = _now()
         if goal_id is None:
-            cur = conn.execute(
+            conn.execute(
                 "INSERT INTO user_goals (content, active, created_at, updated_at) VALUES (?, 1, ?, ?)",
                 (content, now, now),
             )
-            conn.commit()
-            return cur.lastrowid  # type: ignore[return-value]
         else:
             conn.execute(
                 "UPDATE user_goals SET content = ?, updated_at = ? WHERE id = ?",
                 (content, now, goal_id),
             )
-            conn.commit()
-            return goal_id
+        conn.commit()
 
     def deactivate_goal(self, goal_id: int) -> None:
         """Mark a goal as inactive (soft-delete)."""
@@ -377,14 +372,13 @@ class DatabaseService:
         cur.close()
         return result
 
-    def get_month_over_month_deltas(
+    def get_monthly_spend(
         self,
         date_from: str,
         date_to: str,
-        lookback_months: int = 3,
         accounts: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        """Monthly spend totals with delta_pct vs prior month and avg_baseline over lookback_months."""
+        """Return monthly expense totals. Each row: {month, total}."""
         account_clause, account_params = self._build_account_filter(accounts)
         sql = f"""
             SELECT strftime('%Y-%m', date) AS month, SUM(ABS(amount_base)) AS total
@@ -398,71 +392,34 @@ class DatabaseService:
         """
         conn = get_connection()
         cur = conn.execute(sql, [date_from, date_to] + account_params)
-        rows = self._rows_to_dicts(cur)
+        result = self._rows_to_dicts(cur)
         cur.close()
-
-        result = []
-        for i, row in enumerate(rows):
-            prior = rows[i - 1]["total"] if i > 0 else None
-            delta_pct = ((row["total"] - prior) / prior * 100) if prior else None
-            lookback = rows[max(0, i - lookback_months):i]
-            avg_baseline = (
-                sum(r["total"] for r in lookback) / len(lookback) if lookback else None
-            )
-            result.append({
-                "month": row["month"],
-                "total": row["total"],
-                "delta_pct": round(delta_pct, 2) if delta_pct is not None else None,
-                "avg_baseline": round(avg_baseline, 2) if avg_baseline is not None else None,
-            })
         return result
 
-    def get_recurring_charges(
+    def get_merchant_monthly_spend(
         self,
         date_from: str,
         date_to: str,
         accounts: list[str] | None = None,
-        min_months: int = 2,
-        amount_tolerance_pct: float = 0.10,
     ) -> list[dict[str, Any]]:
-        """Merchants with stable periodic charges (CV-based detection in Python)."""
+        """Return per-merchant per-month expense totals. Each row: {merchant_normalized, month, total}."""
         account_clause, account_params = self._build_account_filter(accounts)
         sql = f"""
-            SELECT merchant_normalized, strftime('%Y-%m', date) AS month,
-                   ABS(amount_base) AS amount
+            SELECT merchant_normalized,
+                   strftime('%Y-%m', date) AS month,
+                   SUM(ABS(amount_base)) AS total
             FROM transactions
             WHERE date >= ? AND date <= ?
               AND amount_base < 0
               AND duplicate_of IS NULL
               {account_clause}
+            GROUP BY merchant_normalized, month
             ORDER BY merchant_normalized, month
         """
         conn = get_connection()
         cur = conn.execute(sql, [date_from, date_to] + account_params)
-        rows = self._rows_to_dicts(cur)
+        result = self._rows_to_dicts(cur)
         cur.close()
-
-        by_merchant: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-        for row in rows:
-            by_merchant[row["merchant_normalized"]][row["month"]].append(row["amount"])
-
-        result = []
-        for merchant, months_data in by_merchant.items():
-            if len(months_data) < min_months:
-                continue
-            monthly_totals = [sum(v) for v in months_data.values()]
-            mean = sum(monthly_totals) / len(monthly_totals)
-            if mean == 0:
-                continue
-            cv = (statistics.stdev(monthly_totals) / mean) if len(monthly_totals) > 1 else 0.0
-            if cv <= amount_tolerance_pct:
-                result.append({
-                    "merchant_normalized": merchant,
-                    "months_seen": len(months_data),
-                    "avg_amount": round(mean, 2),
-                    "cv": round(cv, 4),
-                })
-        result.sort(key=lambda x: x["avg_amount"], reverse=True)
         return result
 
     def get_transfer_fees_summary(
@@ -556,6 +513,95 @@ class DatabaseService:
         cur.close()
         return result
 
+    def get_transaction_date_range(
+        self,
+        accounts: list[str] | None = None,
+    ) -> tuple[str, str] | None:
+        """Return (min_date, max_date) from the transactions table, or None if empty."""
+        account_clause, account_params = self._build_account_filter(accounts)
+        sql = f"""
+            SELECT MIN(date) AS min_date, MAX(date) AS max_date
+            FROM transactions
+            WHERE 1=1
+            {account_clause}
+        """
+        conn = get_connection()
+        cur = conn.execute(sql, account_params)
+        row = cur.fetchone()
+        cur.close()
+        if row is None or row[0] is None or row[1] is None:
+            return None
+        return str(row[0]), str(row[1])
+
+    @staticmethod
+    def _accounts_hash(accounts: list[str] | None) -> str:
+        """Stable hash for account list for cache keys (sorted for consistency)."""
+        key = ",".join(sorted(accounts or []))
+        return hashlib.sha256(key.encode()).hexdigest()
+
+    def get_insights_cache(
+        self,
+        date_from: str,
+        date_to: str,
+        accounts: list[str] | None,
+    ) -> dict[str, Any] | None:
+        """Return cached insights for (date_from, date_to, accounts), or None on miss."""
+        conn = get_connection()
+        h = self._accounts_hash(accounts)
+        cur = conn.execute(
+            """
+            SELECT aggregations_json, habits_json, suggestions_json
+            FROM insights_cache
+            WHERE date_from = ? AND date_to = ? AND accounts_hash = ?
+            """,
+            (date_from, date_to, h),
+        )
+        row = cur.fetchone()
+        cur.close()
+        if row is None:
+            return None
+        return {
+            "aggregations": json.loads(row[0]),
+            "habits": json.loads(row[1]),
+            "suggestions": json.loads(row[2]),
+        }
+
+    def save_insights_cache(
+        self,
+        date_from: str,
+        date_to: str,
+        accounts: list[str] | None,
+        aggregations: dict[str, Any],
+        habits: list[Any],
+        suggestions: list[Any],
+    ) -> None:
+        """Store or replace cached insights for (date_from, date_to, accounts)."""
+        conn = get_connection()
+        h = self._accounts_hash(accounts)
+        now = _now()
+        conn.execute(
+            """
+            INSERT INTO insights_cache
+                (date_from, date_to, accounts_hash, aggregations_json, habits_json, suggestions_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date_from, date_to, accounts_hash) DO UPDATE SET
+                aggregations_json = excluded.aggregations_json,
+                habits_json = excluded.habits_json,
+                suggestions_json = excluded.suggestions_json,
+                created_at = excluded.created_at
+            """,
+            (
+                date_from,
+                date_to,
+                h,
+                json.dumps(aggregations),
+                json.dumps(habits),
+                json.dumps(suggestions),
+                now,
+            ),
+        )
+        conn.commit()
+
     def get_category_trend(
         self,
         category: str,
@@ -635,3 +681,16 @@ class DatabaseService:
         result = self._rows_to_dicts(cur)
         cur.close()
         return result
+
+    def get_latest_reconciliation_run_date(self) -> str | None:
+        """Return MAX(completed_at) from runs_history where status = 'complete', or None."""
+        sql = """
+            SELECT MAX(completed_at) AS latest_completed
+            FROM runs_history
+            WHERE status = 'complete'
+        """
+        conn = get_connection()
+        cur = conn.execute(sql)
+        row = cur.fetchone()
+        cur.close()
+        return row["latest_completed"] if row and row["latest_completed"] is not None else None

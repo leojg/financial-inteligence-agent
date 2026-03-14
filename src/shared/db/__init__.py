@@ -174,6 +174,17 @@ def _migrate(conn: sqlite3.Connection) -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS insights_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date_from TEXT NOT NULL,
+                date_to TEXT NOT NULL,
+                accounts_hash TEXT NOT NULL,
+                aggregations_json TEXT NOT NULL,
+                habits_json TEXT NOT NULL,
+                suggestions_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE(date_from, date_to, accounts_hash)
+            );
         """)
         conn.execute("INSERT INTO schema_version (version) VALUES (3)")
         conn.commit()
