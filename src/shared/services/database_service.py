@@ -550,7 +550,7 @@ class DatabaseService:
         h = self._accounts_hash(accounts)
         cur = conn.execute(
             """
-            SELECT aggregations_json, habits_json, suggestions_json
+            SELECT aggregations_json, habits_json, suggestions_json, created_at
             FROM insights_cache
             WHERE date_from = ? AND date_to = ? AND accounts_hash = ?
             """,
@@ -564,6 +564,7 @@ class DatabaseService:
             "aggregations": json.loads(row[0]),
             "habits": json.loads(row[1]),
             "suggestions": json.loads(row[2]),
+            "created_at": str(row[3]),
         }
 
     def get_latest_insights_cache(self) -> dict[str, Any] | None:

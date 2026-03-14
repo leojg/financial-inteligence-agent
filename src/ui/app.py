@@ -867,14 +867,128 @@ def render_main() -> None:
 _SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
 
 
+def _format_currency(value: float) -> str:
+    """Format a number as USD for display."""
+    return f"${value:,.2f}" if value is not None else "—"
+
+
+def _as_list_of_dicts(value: Any) -> list[dict[str, Any]]:
+    """Normalize a value to a list of dicts (for habits, suggestions, month_deltas, recurring_charges)."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [x for x in value if isinstance(x, dict)]
+    if isinstance(value, dict):
+        return [x for x in value.values() if isinstance(x, dict)]
+    return []
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Normalize a value to a dict (for aggregations, transfer_fees_summary when not a list)."""
+    if value is None:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _spending_by_category_pairs(spending: Any) -> list[tuple[str, float]]:
+    """Return (category, total) pairs whether spending is a dict or a list."""
+    if not spending:
+        return []
+    if isinstance(spending, dict):
+        return [(str(k), float(v)) for k, v in spending.items()]
+    if isinstance(spending, list):
+        pairs: list[tuple[str, float]] = []
+        for item in spending:
+            if isinstance(item, dict):
+                cat = item.get("category") or item.get("name") or ""
+                tot = item.get("total") or item.get("amount") or 0
+                pairs.append((str(cat), float(tot)))
+            elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                pairs.append((str(item[0]), float(item[1])))
+        return pairs
+    return []
+
+
+def _render_statistics(aggregations: dict[str, Any]) -> None:
+    """Render aggregations with titles and lists (no raw JSON)."""
+    aggregations = _as_dict(aggregations)
+    # Spending by category: dict[category -> total] or list of same
+    spending_raw = aggregations.get("spending_by_category")
+    spending_pairs = _spending_by_category_pairs(spending_raw)
+    st.markdown("**Spending by category**")
+    if not spending_pairs:
+        st.caption("No spending by category.")
+    else:
+        spending_pairs.sort(key=lambda x: -x[1])
+        items = [f"- **{html.escape(cat)}**: {_format_currency(tot)}" for cat, tot in spending_pairs]
+        st.markdown("\n".join(items))
+
+    # Month-over-month deltas: list[{month, total, delta_pct, avg_baseline}]
+    month_deltas = _as_list_of_dicts(aggregations.get("month_deltas"))
+    st.markdown("**Month-over-month**")
+    if not month_deltas:
+        st.caption("No month-over-month data.")
+    else:
+        lines = []
+        for row in month_deltas:
+            month = row.get("month", "")
+            total = row.get("total")
+            delta_pct = row.get("delta_pct")
+            avg_baseline = row.get("avg_baseline")
+            part = f"- **{html.escape(str(month))}**: {_format_currency(total)}"
+            if delta_pct is not None:
+                part += f" (Δ {delta_pct:+.1f}% vs prior)"
+            if avg_baseline is not None:
+                part += f", baseline avg {_format_currency(avg_baseline)}"
+            lines.append(part)
+        st.markdown("\n".join(lines))
+
+    # Recurring charges: list[{merchant_normalized, months_seen, avg_amount, cv}]
+    recurring = _as_list_of_dicts(aggregations.get("recurring_charges"))
+    st.markdown("**Recurring charges**")
+    if not recurring:
+        st.caption("No recurring charges detected.")
+    else:
+        items = [f"- **{html.escape(str(r.get('merchant_normalized', '')))}**: {_format_currency(r.get('avg_amount'))} avg ({r.get('months_seen', 0)} months)" for r in recurring]
+        st.markdown("\n".join(items))
+
+    # Transfer fees summary: {count, total, avg_per_transfer, transactions: [...]} or list of txns
+    fees_raw = aggregations.get("transfer_fees_summary")
+    if isinstance(fees_raw, list):
+        txns = fees_raw
+        total = sum(float(t.get("amount_base") or t.get("amount") or 0) for t in txns if isinstance(t, dict))
+        count = len(txns)
+        fees = {"count": count, "total": total, "avg_per_transfer": total / count if count else None, "transactions": txns}
+    else:
+        fees = _as_dict(fees_raw)
+    st.markdown("**Transfer fees**")
+    count = fees.get("count", 0) or 0
+    total = fees.get("total")
+    avg_pt = fees.get("avg_per_transfer")
+    if count == 0:
+        st.caption("No transfer fees in this period.")
+    else:
+        st.caption(f"Total: {_format_currency(total)} across {count} transaction(s), avg {_format_currency(avg_pt)} per transfer.")
+        txns = fees.get("transactions") or []
+        if txns:
+            lines = []
+            for t in txns:
+                if not isinstance(t, dict):
+                    continue
+                lines.append(f"- {t.get('date', '')} · {html.escape(str(t.get('merchant', '')))} · {_format_currency(t.get('amount_base') or t.get('amount'))} ({t.get('category', '')})")
+            if lines:
+                st.markdown("\n".join(lines))
+
+
 def _render_insights_dashboard(state: dict[str, Any]) -> None:
     """Render Statistics, Spending habits, and Observations sections from insights state."""
-    aggregations = state.get("aggregations") or {}
-    habits = state.get("habits") or []
-    suggestions = state.get("suggestions") or []
+    state = _as_dict(state)
+    aggregations = _as_dict(state.get("aggregations"))
+    habits = _as_list_of_dicts(state.get("habits"))
+    suggestions = _as_list_of_dicts(state.get("suggestions"))
 
     st.subheader("Statistics")
-    st.text(json.dumps(aggregations, indent=2))
+    _render_statistics(aggregations)
 
     st.subheader("Spending habits")
     if not habits:
@@ -957,7 +1071,36 @@ def render_insights_tab() -> None:
         _render_insights_dashboard(state)
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# ── Settings tab ─────────────────────────────────────────────────────────────
+
+def render_settings_tab() -> None:
+    """Render the Settings tab: user goals (add, list, remove)."""
+    st.subheader("Settings")
+    st.subheader("User goals")
+    st.caption("Goals are used by the insights agent when generating habits and suggestions. Add, edit, or remove goals below.")
+
+    db = DatabaseService()
+    goals = db.get_active_goals()
+
+    for goal in goals:
+        gid = goal.get("id")
+        content = goal.get("content", "")
+        col_text, col_btn = st.columns([1, 0.12])
+        with col_text:
+            st.text(content)
+        with col_btn:
+            if st.button("Remove", key=f"goal_remove_{gid}", type="secondary"):
+                db.deactivate_goal(gid)
+                st.rerun()
+    st.markdown("---")
+
+    new_goal = st.text_input("New goal", placeholder="e.g. Save 20% of income each month", key="settings_new_goal")
+    if st.button("Add goal", key="settings_add_goal", type="primary"):
+        if (new_goal or "").strip():
+            db.upsert_goal((new_goal or "").strip())
+            st.rerun()
+        else:
+            st.warning("Enter a goal before adding.")
 
 
 def main() -> None:
@@ -970,13 +1113,17 @@ def main() -> None:
         _resume_graph()
         return
 
-    tab_run, tab_past, tab_insights = st.tabs(["Run reconciliation", "Past runs", "Insights"])
+    tab_run, tab_past, tab_insights, tab_settings = st.tabs([
+        "Run reconciliation", "Past runs", "Insights", "Settings",
+    ])
     with tab_run:
         render_main()
     with tab_past:
         render_past_runs()
     with tab_insights:
         render_insights_tab()
+    with tab_settings:
+        render_settings_tab()
 
 
 if __name__ == "__main__":

@@ -9,8 +9,8 @@
   "image_distro": "wolfi",
   "serde": {
     "allowed_msgpack_modules": [
-      ["agent.state", "RawDocument"],
-      ["agent.state", "Transaction"]
+      ["shared.models", "RawDocument"],
+      ["shared.models", "Transaction"]
     ]
   }
 }
