@@ -10,7 +10,9 @@
   "serde": {
     "allowed_msgpack_modules": [
       ["shared.models", "RawDocument"],
-      ["shared.models", "Transaction"]
+      ["shared.models", "Transaction"],
+      ["shared.models", "Receipt"],
+      ["shared.models", "ReceiptLine"]
     ]
   }
 }

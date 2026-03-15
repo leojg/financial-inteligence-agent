@@ -18,7 +18,6 @@ from langchain_core.tools import tool
 
 from shared.services.database_service import DatabaseService
 
-
 # ── Aggregation tools ─────────────────────────────────────────────────────────
 # Called by the pipeline's compute_aggregations node.
 # Also available to the chat agent for broad spending questions.
@@ -28,7 +27,7 @@ def get_spending_by_category(
     date_from: str,
     date_to: str,
     accounts: list[str] | None = None,
-) -> dict[str, float]:
+) -> list[dict[str, Any]]:
     """Return total spending per category for the given period.
 
     Sums absolute spend per category, expenses only. Excludes duplicates.
@@ -108,7 +107,7 @@ def get_recurring_charges(
     by_merchant: dict[str, list[float]] = defaultdict(list)
     for row in rows:
         by_merchant[row["merchant_normalized"]].append(row["total"])
-    result = []
+    result: list[dict[str, Any]] = []
     for merchant, monthly_totals in by_merchant.items():
         if len(monthly_totals) < 2:
             continue
@@ -123,7 +122,7 @@ def get_recurring_charges(
                 "avg_amount": round(mean, 2),
                 "cv": round(cv, 4),
             })
-    result.sort(key=lambda x: x["avg_amount"], reverse=True)
+    result.sort(key=lambda x: float(x["avg_amount"]), reverse=True)
     return result
 
 
@@ -132,7 +131,7 @@ def get_transfer_fees_summary(
     date_from: str,
     date_to: str,
     accounts: list[str] | None = None,
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
     """Summarize transfer fees and commissions paid during the period.
 
     Queries transactions in fee-related categories. Returns an overview plus

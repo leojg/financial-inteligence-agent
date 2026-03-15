@@ -1,7 +1,8 @@
 """Shared data models used across agents."""
 
-from pydantic import BaseModel
 from typing import Literal
+
+from pydantic import BaseModel
 
 
 class Transaction(BaseModel):
@@ -35,7 +36,7 @@ class RawDocument(BaseModel):
 
 class Habit(BaseModel):
     """A habit detected in the spending data."""
-    
+
     category: str
     observation: str
     severity: Literal["info", "warning", "critical"]
@@ -55,3 +56,22 @@ class InsightsOutput(BaseModel):
     
     habits: list[Habit]
     suggestions: list[Suggestion]
+
+class ReceiptLine(BaseModel):
+    """A single line item within a receipt."""
+
+    description: str
+    amount: float
+    quantity: float | None = None
+
+class Receipt(BaseModel):
+    """A parsed receipt document mapped to a single Transaction."""
+
+    date: str | None
+    merchant: str
+    account: str = "Receipt"           # payment method or "Receipt"
+    source_file: str
+    currency: str | None
+    total: float           # the single amount that maps to Transaction
+    lines: list[ReceiptLine]
+    confidence: float | None = None

@@ -1,14 +1,25 @@
-from __future__ import annotations
-import json
-from typing import Callable
-from langchain_openai import ChatOpenAI
-from shared.services.database_service import DatabaseService
-from agents.insights.state import InsightsState
-from agents.insights.configuration import InsightsConfig
-from shared.models import InsightsOutput
-from agents.insights.tools import get_spending_by_category, get_month_over_month_deltas, get_recurring_charges, get_transfer_fees_summary
+"""Node functions for the insights LangGraph pipeline."""
 
-def load_context(state: InsightsState) -> InsightsState:
+from __future__ import annotations
+
+import json
+from typing import Any, Callable, cast
+
+from langchain_openai import ChatOpenAI
+
+from agents.insights.configuration import InsightsConfig
+from agents.insights.state import InsightsState
+from agents.insights.tools import (
+    get_month_over_month_deltas,
+    get_recurring_charges,
+    get_spending_by_category,
+    get_transfer_fees_summary,
+)
+from shared.models import InsightsOutput
+from shared.services.database_service import DatabaseService
+
+
+def load_context(state: InsightsState) -> dict[str, Any]:
     """Load the context for the insights agent."""
     database_service = DatabaseService()
 
@@ -20,7 +31,8 @@ def load_context(state: InsightsState) -> InsightsState:
             raise ValueError("No transactions found in the database.")
         date_from, date_to = date_range
     else:
-        date_from, date_to = state["date_from"], state["date_to"]
+        date_from = state["date_from"] or ""
+        date_to = state["date_to"] or ""
 
     goals = database_service.get_active_goals()
 
@@ -37,8 +49,8 @@ def load_context(state: InsightsState) -> InsightsState:
         last_insights is None
         or last_run is None
         or last_run > last_insights["created_at"]
-    ) 
-    
+    )
+
     cache_valid = not cache_is_stale and not state["force_recompute"]
 
     return {
@@ -46,13 +58,12 @@ def load_context(state: InsightsState) -> InsightsState:
         "date_to": date_to,
         "goals_prompt": goals_prompt,
         "cache_valid": cache_valid,
-        "aggregations": last_insights["aggregations"] if cache_valid else None,
-        "habits": last_insights["habits"] if cache_valid else None,
-        "suggestions": last_insights["suggestions"] if cache_valid else None,
-
+        "aggregations": last_insights["aggregations"] if (cache_valid and last_insights is not None) else None,
+        "habits": last_insights["habits"] if (cache_valid and last_insights is not None) else None,
+        "suggestions": last_insights["suggestions"] if (cache_valid and last_insights is not None) else None,
     }
 
-def compute_aggregations(state: InsightsState) -> InsightsState:
+def compute_aggregations(state: InsightsState) -> dict[str, Any]:
     """Compute aggregated spending data from the transactions table."""
     date_from, date_to = state["date_from"], state["date_to"]
     accounts = state["accounts"]
@@ -95,15 +106,12 @@ def compute_aggregations(state: InsightsState) -> InsightsState:
         },
     }
 
-def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsState], InsightsState]:
+def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsState], dict[str, Any]]:
     """Return a node that generates insights from the aggregated data."""
-
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature).with_structured_output(InsightsOutput)
 
-
-    def generate_insights(state: InsightsState) -> InsightsState:
+    def generate_insights(state: InsightsState) -> dict[str, Any]:
         """Generate insights from the aggregated data."""
-
         goals_section = f"\n{state['goals_prompt']}\n" if state.get("goals_prompt") else ""
 
         prompt = f"""You are a personal finance analyst.
@@ -121,7 +129,7 @@ def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsSta
             Severity guide: info = noteworthy, warning = needs attention, critical = requires immediate action.
         """
 
-        result: InsightsOutput = llm.invoke(prompt)
+        result = cast(InsightsOutput, llm.invoke(prompt))
 
         return {
             "habits": [h.model_dump() for h in result.habits],
@@ -130,8 +138,13 @@ def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsSta
 
     return generate_insights
 
-def persist_results(state: InsightsState) -> dict:
+def persist_results(state: InsightsState) -> dict[str, Any]:
     """Persist aggregations, habits and suggestions to the insights cache."""
+    assert state["date_from"] is not None
+    assert state["date_to"] is not None
+    assert state["aggregations"] is not None
+    assert state["habits"] is not None
+    assert state["suggestions"] is not None
     DatabaseService().save_insights_cache(
         date_from=state["date_from"],
         date_to=state["date_to"],

@@ -1,6 +1,6 @@
 """Agent configuration (model, currency, categories)."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -12,12 +12,6 @@ class ReconciliationConfig:
     vision_max_tokens: int = 4096
     temperature: float = 0.0
     base_currency: str = "USD"
-    categories: list[str] = field(default_factory=lambda: [
-        "Groceries", "Dining", "Transport", "Utilities", "Healthcare",
-        "Entertainment", "Shopping", "Travel", "Education", "Transfer",
-        "Fees & Charges", "Salary", "Freelance", "Other Income", "Other",
-        "Rent"
-    ])
     image_low_confidence_threshold: float = 0.98
 
 DEFAULT_CONFIG = ReconciliationConfig()

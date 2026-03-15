@@ -18,7 +18,7 @@ from langchain_openai import ChatOpenAI
 from agents.reconciliator.configuration import ReconciliationConfig
 from agents.reconciliator.state import ReconciliationState
 from agents.reconciliator.utils.parsers import load_documents
-from shared.models import RawDocument, Transaction
+from shared.models import RawDocument, Receipt, ReceiptLine, Transaction
 from shared.services.database_service import DatabaseService
 from shared.services.exchange_service import ExchangeService
 
@@ -102,18 +102,35 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
                 "source": {"type": "base64", "media_type": media_type, "data": data},
             })
 
-        msg_content.append({
-            "type": "text",
-            "text": """Extract all line items and totals from this receipt.
-            Include the date, amount and description of the charges.
-            Also include currency if present, it it's not present, do not include it.
-            Include a confidence score for each transaction between 0 and 1.
-            Do not include any other text in your response, no markdown blocks.
-            If the receipt does not clearly states that a date is the date of the charge, do not include a date.
-            Return a single JSON object with the format:
-            { "results": [ { "transactions": [ { "date": "YYYY-MM-DD", "amount": number, "description": "..." } ], "confidence": 0-1 }, ... ] }
-            """
-            })
+        msg_content.append(
+            {
+                "type": "text",
+                "text": """Extract the receipt summary and line items from this image.
+                Include the date, currency, and confidence score.
+                Do not include any other text in your response, no markdown blocks.
+                If the receipt does not clearly state that a date is the date of the charge, set date to null.
+
+                Return a single JSON object with this exact format:
+                { "results": [ {
+                    "merchant": "merchant name",
+                    "date": "YYYY-MM-DD or null",
+                    "currency": "currency code or null if not present",
+                    "payment_method": "card or payment method shown (e.g. VISA ****1234) or null",
+                    "total": total amount paid as number,
+                    "lines": [
+                        { "description": "line item description", "amount": number, "quantity": number or null }
+                    ],
+                    "confidence": 0-1
+                } ] }
+
+                Rules:
+                - total is the final amount paid, not a sum you compute from lines
+                - Include taxes, tips, and service charges as individual line items if shown
+                - If multiple receipts are visible in the image, return one result object per receipt
+                - Do not include any other text, no markdown blocks
+                """
+            }
+        )
 
         messages = [HumanMessage(content=msg_content)]  # type: ignore[arg-type]
         response = llm.invoke(messages)
@@ -147,14 +164,38 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
 
         for i, (path, _, _) in enumerate(images):
             item = results[i] if i < len(results) else {}
-            txs = item.get("transactions", [])
             confidence = item.get("confidence", 0.0)
-            # Format as markdown so normalize can re-extract
-            lines = ["| date | amount | description |", "|------|--------|-------------|"]
-            for tx in txs:
-                lines.append(f"| {tx.get('date', '')} | {tx.get('amount', '')} | {tx.get('description', '')} |")
-            doc_content = "\n".join(lines) if lines else ""
-            confidence = item.get("confidence", 0.0)
+
+            # Build Receipt model — lines created but ignored until v0.7
+            receipt = Receipt(
+                account=item.get("account") or "Receipt",
+                merchant=item.get("merchant", ""),
+                date=item.get("date") or None,
+                currency=item.get("currency") or None,
+                total=float(item.get("total") or 0.0),
+                lines=[
+                    ReceiptLine(
+                        description=line.get("description", ""),
+                        amount=float(line.get("amount", 0.0)),
+                        quantity=line.get("quantity"),
+                    )
+                    for line in (item.get("lines") or [])
+                    if isinstance(line, dict)
+                ],
+                source_file=path,
+                confidence=confidence,
+            )
+
+            # Collapse receipt to a single-row markdown table for normalize
+            account = receipt.account or "Receipt"
+            date = receipt.date or ""
+
+            doc_content = (
+                "| date | amount | description | account |\n"
+                "|------|--------|-------------|----------|\n"
+                f"| {date} | {receipt.total} | {receipt.merchant} | {account} |"
+            )
+
             raw_documents.append(
                 RawDocument(
                     source_file=path,
@@ -193,17 +234,23 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
                 continue
 
             prompt = f"""
-                Extract all transactions from the following bank statement.
-                Infer the account name from the document (bank name, account type, last 4 digits if present).
+                Extract all transactions from the following financial document.
+                This may be a bank statement or a receipt.
+                - For bank statements: infer the account name from the document (bank name, account type, last 4 digits if present).
+                - For receipts: the account and currency columns are already provided in the document — use them as-is.
+
+                If a currency is explicitly stated in the document, use it.
+                If no currency is stated, default to {config.base_currency}.
+
 
                 Return ONLY a JSON array with this exact schema, no preamble, no markdown:
                 [{{
                     "date": "YYYY-MM-DD",
                     "amount_original": 0.00,
                     "amount_base": null,
-                    "currency": "UYU or USD",
+                    "currency": "currency code",
                     "merchant": "merchant name",
-                    "account": "inferred account name",
+                    "account": "account name",
                     "source_file": "{doc.source_file}"
                 }}]
 
@@ -399,17 +446,22 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
                 ])
 
                 prompt = f"""
-                    Categorize each transaction using ONLY the categories listed below.
-                    If you cannot confidently categorize a transaction, set category to null.
+                        Categorize each transaction using a standard personal finance category.
+                        Use consistent, common category names such as:
+                        Groceries, Dining, Transport, Utilities, Healthcare, Entertainment,
+                        Shopping, Travel, Education, Salary, Freelance, Transfer, Fees & Charges,
+                        Rent, Other Income, Other.
 
-                    Categories: {", ".join(config.categories)}
+                        You may use a different category if none of the above fit, but prefer
+                        the list above for common transactions.
+                        If you cannot confidently categorize a transaction, set category to null.
 
-                    Transactions (id | merchant | amount currency):
-                    {transaction_list}
+                        Transactions (id | merchant | amount currency):
+                        {transaction_list}
 
-                    Return ONLY a JSON array, no preamble, no markdown:
-                    [{{"id": "transaction-id", "category": "Category or null"}}]
-                """
+                        Return ONLY a JSON array, no preamble, no markdown:
+                        [{{"id": "transaction-id", "category": "Category or null"}}]
+                    """
 
                 try:
                     response = llm.invoke(prompt)
@@ -611,7 +663,8 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
             - Unexpected foreign currency charges
             - Other clear inconsistencies: e.g. duplicate charge for the same service, amounts that suggest a billing error or unauthorized use.
 
-            Do not flag: income (salary, freelance, other income, transfer credits), routine subscriptions (Netflix, Spotify, etc.), normal grocery/dining/transportation spending, utility bills, transfers between user's own accounts.
+            Do not flag transactions with positive amounts — these are income or credits regardless of category. 
+            Do not flag routine subscriptions (Netflix, Spotify, etc.), normal grocery/dining/transportation spending, utility bills, transfers between user's own accounts.
             Do not flag income for being high or variable. Lump-sum and variable income are normal.
             Do not flag large routine charges such as rent or utilities.
 

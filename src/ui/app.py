@@ -867,7 +867,7 @@ def render_main() -> None:
 _SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
 
 
-def _format_currency(value: float) -> str:
+def _format_currency(value: float | None) -> str:
     """Format a number as USD for display."""
     return f"${value:,.2f}" if value is not None else "—"
 
@@ -954,28 +954,30 @@ def _render_statistics(aggregations: dict[str, Any]) -> None:
 
     # Transfer fees summary: {count, total, avg_per_transfer, transactions: [...]} or list of txns
     fees_raw = aggregations.get("transfer_fees_summary")
+    fees: dict[str, Any]
     if isinstance(fees_raw, list):
-        txns = fees_raw
-        total = sum(float(t.get("amount_base") or t.get("amount") or 0) for t in txns if isinstance(t, dict))
-        count = len(txns)
-        fees = {"count": count, "total": total, "avg_per_transfer": total / count if count else None, "transactions": txns}
+        fee_txns_raw = fees_raw
+        fee_total_raw = sum(float(t.get("amount_base") or t.get("amount") or 0) for t in fee_txns_raw if isinstance(t, dict))
+        fee_count_raw = len(fee_txns_raw)
+        fees = {"count": fee_count_raw, "total": fee_total_raw, "avg_per_transfer": fee_total_raw / fee_count_raw if fee_count_raw else None, "transactions": fee_txns_raw}
     else:
         fees = _as_dict(fees_raw)
     st.markdown("**Transfer fees**")
-    count = fees.get("count", 0) or 0
-    total = fees.get("total")
-    avg_pt = fees.get("avg_per_transfer")
-    if count == 0:
+    fee_count = int(fees.get("count") or 0)
+    fee_total: float | None = float(fees["total"]) if fees.get("total") is not None else None
+    fee_avg_pt: float | None = float(fees["avg_per_transfer"]) if fees.get("avg_per_transfer") is not None else None
+    if fee_count == 0:
         st.caption("No transfer fees in this period.")
     else:
-        st.caption(f"Total: {_format_currency(total)} across {count} transaction(s), avg {_format_currency(avg_pt)} per transfer.")
-        txns = fees.get("transactions") or []
-        if txns:
+        st.caption(f"Total: {_format_currency(fee_total)} across {fee_count} transaction(s), avg {_format_currency(fee_avg_pt)} per transfer.")
+        fee_txns: list[Any] = list(fees.get("transactions") or [])
+        if fee_txns:
             lines = []
-            for t in txns:
+            for t in fee_txns:
                 if not isinstance(t, dict):
                     continue
-                lines.append(f"- {t.get('date', '')} · {html.escape(str(t.get('merchant', '')))} · {_format_currency(t.get('amount_base') or t.get('amount'))} ({t.get('category', '')})")
+                amt = t.get('amount_base') or t.get('amount')
+                lines.append(f"- {t.get('date', '')} · {html.escape(str(t.get('merchant', '')))} · {_format_currency(float(amt) if amt is not None else None)} ({t.get('category', '')})")
             if lines:
                 st.markdown("\n".join(lines))
 
@@ -1089,8 +1091,8 @@ def render_settings_tab() -> None:
         with col_text:
             st.text(content)
         with col_btn:
-            if st.button("Remove", key=f"goal_remove_{gid}", type="secondary"):
-                db.deactivate_goal(gid)
+            if gid is not None and st.button("Remove", key=f"goal_remove_{gid}", type="secondary"):
+                db.deactivate_goal(int(gid))
                 st.rerun()
     st.markdown("---")
 
