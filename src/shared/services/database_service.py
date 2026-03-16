@@ -718,3 +718,119 @@ class DatabaseService:
         row = cur.fetchone()
         cur.close()
         return str(row[0]) if row and row[0] is not None else None
+
+    # ── Receipts ─────────────────────────────────────────────────────────────
+
+    def upsert_receipts(self, receipts: list[dict[str, Any]]) -> None:
+        """Insert or replace receipt rows. Sets created_at automatically."""
+        if not receipts:
+            return
+        now = _now()
+        for r in receipts:
+            r.setdefault("created_at", now)
+        conn = get_connection()
+        conn.executemany(
+            """
+            INSERT OR REPLACE INTO receipts (
+                id, run_id, transaction_id, source_file,
+                merchant, merchant_normalized,
+                date, currency,
+                subtotal, tax_amount, tax_rate, total,
+                receipt_number, confidence, raw_content, created_at
+            ) VALUES (
+                :id, :run_id, :transaction_id, :source_file,
+                :merchant, :merchant_normalized,
+                :date, :currency,
+                :subtotal, :tax_amount, :tax_rate, :total,
+                :receipt_number, :confidence, :raw_content, :created_at
+            )
+            """,
+            receipts,
+        )
+        conn.commit()
+
+    def upsert_receipt_lines(self, lines: list[dict[str, Any]]) -> None:
+        """Insert or replace receipt line items."""
+        if not lines:
+            return
+        conn = get_connection()
+        conn.executemany(
+            """
+            INSERT OR REPLACE INTO receipt_lines (
+                id, receipt_id, line_number, description,
+                quantity, unit_price, amount, category
+            ) VALUES (
+                :id, :receipt_id, :line_number, :description,
+                :quantity, :unit_price, :amount, :category
+            )
+            """,
+            lines,
+        )
+        conn.commit()
+
+    def auto_link_receipts(self, run_id: str) -> int:
+        """Link unlinked receipts to transactions within the same run.
+
+        Match on: date + abs(total) == abs(amount_original) + currency + merchant_normalized.
+        Only attempts linking when receipt has non-null date and currency.
+        Returns the number of receipts linked.
+        """
+        conn = get_connection()
+        cur = conn.execute(
+            """
+            UPDATE receipts
+            SET transaction_id = (
+                SELECT t.id
+                FROM transactions t
+                WHERE t.run_id = receipts.run_id
+                AND t.date = receipts.date
+                AND abs(t.amount_original) = abs(receipts.total)
+                AND t.currency = receipts.currency
+                AND t.merchant_normalized = receipts.merchant_normalized
+                LIMIT 1
+            )
+            WHERE receipts.run_id = ?
+            AND receipts.transaction_id IS NULL
+            AND receipts.date IS NOT NULL
+            AND receipts.currency IS NOT NULL
+            """,
+            (run_id,),
+        )
+        linked = cur.rowcount
+        conn.commit()
+        return linked
+
+    def get_receipt_line_breakdown(
+        self,
+        date_from: str,
+        date_to: str,
+        accounts: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Aggregate receipt line spending by category and description.
+
+        Joins receipt_lines → receipts → transactions to get the transaction's
+        category, then groups by (category, line description).
+        Only includes receipts linked to a transaction.
+        """
+        account_clause, account_params = self._build_account_filter(accounts)
+        sql = f"""
+            SELECT t.category,
+                rl.description,
+                COUNT(*) AS occurrences,
+                SUM(ABS(rl.amount)) AS total,
+                AVG(ABS(rl.amount)) AS avg_amount
+            FROM receipt_lines rl
+            JOIN receipts r ON rl.receipt_id = r.id
+            JOIN transactions t ON r.transaction_id = t.id
+            WHERE t.date >= ? AND t.date <= ?
+            AND t.duplicate_of IS NULL
+            AND r.transaction_id IS NOT NULL
+            {account_clause}
+            GROUP BY t.category, rl.description
+            ORDER BY t.category, total DESC
+        """
+        conn = get_connection()
+        cur = conn.execute(sql, [date_from, date_to] + account_params)
+        result = self._rows_to_dicts(cur)
+        cur.close()
+        return result

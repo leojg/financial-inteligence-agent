@@ -189,6 +189,51 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("INSERT INTO schema_version (version) VALUES (3)")
         conn.commit()
 
+    if current < 4:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS receipts (
+                id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                transaction_id TEXT,
+                source_file TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                merchant TEXT NOT NULL,
+                merchant_normalized TEXT NOT NULL,
+                date TEXT,
+                currency TEXT,
+                subtotal REAL,
+                tax_amount REAL,
+                tax_rate REAL,
+                total REAL NOT NULL,
+                receipt_number TEXT,
+                confidence REAL,
+                raw_content TEXT,
+                FOREIGN KEY (run_id) REFERENCES runs_history(run_id),
+                FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS receipt_lines (
+                id TEXT PRIMARY KEY,
+                receipt_id TEXT NOT NULL,
+                line_number INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                quantity REAL DEFAULT 1,
+                unit_price REAL,
+                amount REAL NOT NULL,
+                category TEXT,
+                FOREIGN KEY (receipt_id) REFERENCES receipts(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_receipts_run_id
+                ON receipts(run_id);
+            CREATE INDEX IF NOT EXISTS idx_receipts_transaction_id
+                ON receipts(transaction_id);
+            CREATE INDEX IF NOT EXISTS idx_receipt_lines_receipt_id
+                ON receipt_lines(receipt_id);
+        """)
+        conn.execute("INSERT INTO schema_version (version) VALUES (4)")
+        conn.commit()
+
 
 def get_checkpointer() -> SqliteSaver:
     """Return a SqliteSaver using a dedicated checkpoint connection (same DB file, WAL mode).

@@ -56,22 +56,36 @@ class InsightsOutput(BaseModel):
     
     habits: list[Habit]
     suggestions: list[Suggestion]
-
+    
 class ReceiptLine(BaseModel):
     """A single line item within a receipt."""
 
+    id: str | None = None
+    receipt_id: str | None = None
+    line_number: int | None = None
     description: str
+    quantity: float = 1.0
+    unit_price: float | None = None
     amount: float
-    quantity: float | None = None
+    category: str | None = None
+
 
 class Receipt(BaseModel):
     """A parsed receipt document mapped to a single Transaction."""
 
-    date: str | None
-    merchant: str
-    account: str = "Receipt"           # payment method or "Receipt"
+    id: str | None = None
+    run_id: str | None = None
+    transaction_id: str | None = None
     source_file: str
-    currency: str | None
-    total: float           # the single amount that maps to Transaction
-    lines: list[ReceiptLine]
+    merchant: str
+    merchant_normalized: str | None = None
+    date: str | None = None
+    currency: str | None = None
+    subtotal: float | None = None
+    tax_amount: float | None = None
+    tax_rate: float | None = None
+    total: float
+    receipt_number: str | None = None
     confidence: float | None = None
+    raw_content: str | None = None
+    lines: list[ReceiptLine] = []

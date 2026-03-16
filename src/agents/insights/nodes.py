@@ -14,6 +14,7 @@ from agents.insights.tools import (
     get_recurring_charges,
     get_spending_by_category,
     get_transfer_fees_summary,
+    get_receipt_line_breakdown,
 )
 from shared.models import InsightsOutput
 from shared.services.database_service import DatabaseService
@@ -97,12 +98,21 @@ def compute_aggregations(state: InsightsState) -> dict[str, Any]:
         }
     )
 
+    receipt_line_breakdown = get_receipt_line_breakdown.invoke(
+        {
+            "date_from": date_from,
+            "date_to": date_to,
+            "accounts": accounts,
+        }
+    )
+
     return {
         "aggregations": {
             "spending_by_category": spending_by_category,
             "month_deltas": month_deltas,
             "recurring_charges": recurring_charges,
             "transfer_fees_summary": transfer_fees_summary,
+            "receipt_line_breakdown": receipt_line_breakdown,
         },
     }
 

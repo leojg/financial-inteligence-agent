@@ -277,3 +277,26 @@ def get_largest_transactions(
     return DatabaseService().get_largest_transactions(
         date_from, date_to, limit, category, accounts
     )
+
+@tool
+def get_receipt_line_breakdown(
+    date_from: str,
+    date_to: str,
+    accounts: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Return sub-category spending breakdown from receipt line items.
+
+    Shows what items make up spending within each category (e.g. within
+    Groceries: dairy, meat, cleaning products). Only available for
+    transactions that have linked receipts with line-item detail.
+
+    Args:
+        date_from: Start date inclusive, format YYYY-MM-DD.
+        date_to: End date inclusive, format YYYY-MM-DD.
+        accounts: Optional list of account names to restrict the query.
+
+    Returns:
+        List of {category, description, occurrences, total, avg_amount},
+        sorted by category then total descending.
+    """
+    return DatabaseService().get_receipt_line_breakdown(date_from, date_to, accounts)

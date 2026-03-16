@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -62,7 +63,7 @@ def _init_session() -> None:
     defaults: dict[str, Any] = {
         "graph_state": None,       # last LangGraph state snapshot
         "graph_instance": None,    # compiled graph (cached)
-        "thread_id": "reconciliation-1",
+        "thread_id": str(uuid.uuid4()),
         "interrupted": False,      # waiting at review_low_confidence or human_review
         "interrupt_at": None,      # "review_low_confidence_transactions" | "human_review"
         "low_confidence_decisions": [],  # for review_low_confidence_transactions resume

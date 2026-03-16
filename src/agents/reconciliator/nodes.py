@@ -74,7 +74,8 @@ def ingest(state: ReconciliationState) -> dict[str, Any]:
     ]
 
     return {
-        "raw_documents": raw_documents
+        "raw_documents": raw_documents,
+        "receipts": []
     }
 
 def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
@@ -149,6 +150,7 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
                 text = text.replace("```", "").strip()
 
         raw_documents = []
+        receipts = []
 
         try:
             out = json.loads(text)
@@ -165,35 +167,39 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
         for i, (path, _, _) in enumerate(images):
             item = results[i] if i < len(results) else {}
             confidence = item.get("confidence", 0.0)
+            merchant = item.get("merchant", "")
+            lines_raw = item.get("lines") or []
+            is_receipt = bool(merchant and lines_raw)
 
-            # Build Receipt model — lines created but ignored until v0.7
-            receipt = Receipt(
-                account=item.get("account") or "Receipt",
-                merchant=item.get("merchant", ""),
-                date=item.get("date") or None,
-                currency=item.get("currency") or None,
-                total=float(item.get("total") or 0.0),
-                lines=[
-                    ReceiptLine(
-                        description=line.get("description", ""),
-                        amount=float(line.get("amount", 0.0)),
-                        quantity=line.get("quantity"),
-                    )
-                    for line in (item.get("lines") or [])
-                    if isinstance(line, dict)
-                ],
-                source_file=path,
-                confidence=confidence,
-            )
+            if is_receipt:
+                receipt = Receipt(
+                    merchant=merchant,
+                    date=item.get("date") or None,
+                    currency=item.get("currency") or None,
+                    total=float(item.get("total") or 0.0),
+                    lines=[
+                        ReceiptLine(
+                            description=line.get("description", ""),
+                            amount=float(line.get("amount", 0.0)),
+                            quantity=line.get("quantity") or 1.0,
+                        )
+                        for line in lines_raw
+                        if isinstance(line, dict)
+                    ],
+                    source_file=path,
+                    confidence=confidence,
+                )
+                receipts.append(receipt)
 
-            # Collapse receipt to a single-row markdown table for normalize
-            account = receipt.account or "Receipt"
-            date = receipt.date or ""
+            # Collapse to markdown table for normalize — always, regardless of type
+            date = item.get("date") or ""
+            total = item.get("total") or 0.0
+            account = "Receipt" if is_receipt else "Statement"
 
             doc_content = (
                 "| date | amount | description | account |\n"
                 "|------|--------|-------------|----------|\n"
-                f"| {date} | {receipt.total} | {receipt.merchant} | {account} |"
+                f"| {date} | {total} | {merchant} | {account} |"
             )
 
             raw_documents.append(
@@ -206,7 +212,8 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
             )
 
         return {
-            "raw_documents": raw_documents
+            "raw_documents": raw_documents,
+            "receipts": receipts
         }
 
     return ingest_images
@@ -770,6 +777,52 @@ def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[
             for t in transactions
         ]
         database_service.upsert_transactions(rows)
+
+        receipts = state.get("receipts") or []
+
+        receipt_rows = []
+        line_rows = []
+        for receipt in receipts:
+            if isinstance(receipt, dict):
+                receipt = Receipt(**receipt)
+
+            receipt_id = str(uuid.uuid4())
+            merchant_norm = database_service.normalize_merchant(receipt.merchant)
+
+            receipt_rows.append({
+                "id": receipt_id,
+                "run_id": run_id,
+                "transaction_id": None,
+                "source_file": receipt.source_file,
+                "merchant": receipt.merchant,
+                "merchant_normalized": merchant_norm,
+                "date": receipt.date,
+                "currency": receipt.currency,
+                "subtotal": receipt.subtotal,
+                "tax_amount": receipt.tax_amount,
+                "tax_rate": receipt.tax_rate,
+                "total": receipt.total,
+                "receipt_number": receipt.receipt_number,
+                "confidence": receipt.confidence,
+                "raw_content": receipt.raw_content,
+            })
+
+            for ln, line in enumerate(receipt.lines, start=1):
+                line_rows.append({
+                    "id": str(uuid.uuid4()),
+                    "receipt_id": receipt_id,
+                    "line_number": ln,
+                    "description": line.description,
+                    "quantity": line.quantity,
+                    "unit_price": line.unit_price,
+                    "amount": line.amount,
+                    "category": None,
+                })
+
+        database_service.upsert_receipts(receipt_rows)
+        database_service.upsert_receipt_lines(line_rows)
+        linked = database_service.auto_link_receipts(run_id)
+
         database_service.update_run(
             run_id,
             status="complete",
@@ -782,4 +835,6 @@ def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[
 
 def passthrough(state: ReconciliationState) -> dict[str, Any]:
     """No state change; used for graph structure."""
-    return {}
+    return {
+        "receipts": []
+    }
