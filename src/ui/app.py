@@ -23,8 +23,10 @@ import pandas as pd  # type: ignore[import-untyped]  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from agents.reconciliator.configuration import DEFAULT_CONFIG  # noqa: E402
-from shared.db import get_checkpointer  # noqa: E402
+from shared.db import get_checkpointer, run_migrations  # noqa: E402
 from shared.services.database_service import DatabaseService  # noqa: E402
+
+run_migrations()
 
 # --- Page config ---
 st.set_page_config(

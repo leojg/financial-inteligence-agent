@@ -1,11 +1,12 @@
-"""Exchange rate lookup with SQLite cache."""
+"""Exchange rate lookup with DB cache."""
 
 import logging
 import os
 
 import requests  # type: ignore[import-untyped]
+from sqlalchemy import text
 
-from shared.db import get_connection
+from shared.db import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -21,42 +22,45 @@ class ExchangeService:
 
     def get_rate(self, date: str, from_currency: str, to_currency: str) -> float | None:
         """Return cached or fetched rate for date/currencies; None on failure."""
-        conn = get_connection()
-        cur = conn.execute(
-            "SELECT rate FROM exchange_rates WHERE date = ? AND from_currency = ? AND to_currency = ?",
-            (date, from_currency, to_currency),
-        )
-        row = cur.fetchone()
-        cur.close()
-        if row is not None:
-            return float(row[0])
-
-        try:
-            response = requests.get(
-                self.base_url,
-                params={
-                    "from": from_currency,
-                    "to": to_currency,
-                    "date": date,
-                    "amount": "1",
-                },
+        with get_session() as session:
+            result = session.execute(
+                text("SELECT rate FROM exchange_rates WHERE date = :d AND from_currency = :f AND to_currency = :t"),
+                {"d": date, "f": from_currency, "t": to_currency},
             )
-            response.raise_for_status()
-            data = response.json()
-            rate = float(data["result"])
-        except Exception as e:
-            logger.error(
-                "Failed to get exchange rate for %s %s to %s: %s",
-                date,
-                from_currency,
-                to_currency,
-                e,
-            )
-            return None
+            row = result.fetchone()
+            if row is not None:
+                return float(row[0])
 
-        conn.execute(
-            "INSERT OR REPLACE INTO exchange_rates (date, from_currency, to_currency, rate) VALUES (?, ?, ?, ?)",
-            (date, from_currency, to_currency, rate),
-        )
-        conn.commit()
+            try:
+                response = requests.get(
+                    self.base_url,
+                    params={
+                        "from": from_currency,
+                        "to": to_currency,
+                        "date": date,
+                        "amount": "1",
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+                rate = float(data["result"])
+            except Exception as e:
+                logger.error(
+                    "Failed to get exchange rate for %s %s to %s: %s",
+                    date,
+                    from_currency,
+                    to_currency,
+                    e,
+                )
+                return None
+
+            session.execute(
+                text(
+                    "INSERT INTO exchange_rates (date, from_currency, to_currency, rate) "
+                    "VALUES (:d, :f, :t, :rate) "
+                    "ON CONFLICT (date, from_currency, to_currency) DO UPDATE SET rate = :rate"
+                ),
+                {"d": date, "f": from_currency, "t": to_currency, "rate": rate},
+            )
+            session.commit()
         return rate

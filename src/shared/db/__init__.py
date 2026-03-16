@@ -1,14 +1,16 @@
-"""Shared SQLite persistence for the finance agent.
+"""SQLAlchemy engine, session factory, schema migrations, and LangGraph checkpointer.
 
-DB path, checkpointer for LangGraph, and app tables (exchange_rates,
-normalized_document_cache). Both LangGraph Studio and Streamlit use the same DB
-via get_checkpointer().
+Reads DATABASE_URL from env. Supports sqlite:/// and postgresql:// schemes.
 """
 from __future__ import annotations
 
 import os
 import sqlite3
 from pathlib import Path
+from typing import Any
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, sessionmaker
 
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -20,224 +22,103 @@ _CHECKPOINT_SERDE = JsonPlusSerializer(
     ),
 )
 
-_DEFAULT_DB_PATH = "data/agent.db"
-_connection: sqlite3.Connection | None = None
-_checkpoint_connection: sqlite3.Connection | None = None
+_engine = None
+_SessionFactory: sessionmaker[Session] | None = None
+_checkpoint_conn: sqlite3.Connection | None = None
+_pg_checkpointer: Any = None
 
 
-def get_db_path() -> str:
-    """Return DB path from env FINANCE_AGENT_DB_PATH, or default data/agent.db."""
-    path = os.getenv("FINANCE_AGENT_DB_PATH", _DEFAULT_DB_PATH)
-    path = path.strip()
-    if path:
-        parent = Path(path).resolve().parent
-        parent.mkdir(parents=True, exist_ok=True)
-    return path or _DEFAULT_DB_PATH
+def get_database_url() -> str:
+    """Resolve DATABASE_URL from environment; defaults to sqlite:///data/agent.db."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url:
+        return url
+    Path("data").mkdir(parents=True, exist_ok=True)
+    return "sqlite:///data/agent.db"
 
 
-def _connect(path: str, *, for_checkpointer: bool = False) -> sqlite3.Connection:
-    """Open a SQLite connection with WAL mode for better concurrent access."""
-    conn = sqlite3.connect(path, check_same_thread=False)
-    conn.execute("PRAGMA journal_mode=WAL;")
-    if not for_checkpointer:
-        ensure_schema(conn)
-    return conn
+def _is_sqlite(url: str) -> bool:
+    return url.startswith("sqlite")
 
 
-def get_connection() -> sqlite3.Connection:
-    """Return a shared SQLite connection to the app DB; ensures schema on first use."""
-    global _connection
-    if _connection is None:
-        _connection = _connect(get_db_path())
-    return _connection
+def _sa_url(url: str) -> str:
+    """Add SQLAlchemy dialect prefix for psycopg v3."""
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
 
 
-def _get_checkpoint_connection() -> sqlite3.Connection:
-    """Dedicated connection for the LangGraph checkpointer to avoid concurrent commit on the same connection when the graph runs fan-out (multiple threads)."""
-    global _checkpoint_connection
-    if _checkpoint_connection is None:
-        _checkpoint_connection = _connect(get_db_path(), for_checkpointer=True)
-    return _checkpoint_connection
+def get_engine() -> Any:
+    """Return the shared SQLAlchemy engine (created once)."""
+    global _engine
+    if _engine is None:
+        url = get_database_url()
+        if _is_sqlite(url):
+            _engine = create_engine(
+                url, echo=False, connect_args={"check_same_thread": False}
+            )
+
+            @event.listens_for(_engine, "connect")
+            def _set_sqlite_pragma(dbapi_conn: Any, _record: Any) -> None:
+                cursor = dbapi_conn.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL;")
+                cursor.close()
+        else:
+            _engine = create_engine(_sa_url(url), echo=False, pool_pre_ping=True)
+    return _engine
 
 
-def ensure_schema(conn: sqlite3.Connection) -> None:
-    """Create app tables if they do not exist (exchange_rates, normalized_document_cache)."""
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS exchange_rates (
-            date TEXT NOT NULL,
-            from_currency TEXT NOT NULL,
-            to_currency TEXT NOT NULL,
-            rate REAL NOT NULL,
-            PRIMARY KEY (date, from_currency, to_currency)
-        );
-        CREATE TABLE IF NOT EXISTS normalized_document_cache (
-            content_hash TEXT PRIMARY KEY,
-            source_file TEXT NOT NULL,
-            transactions_json TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS runs_history (
-            run_id TEXT PRIMARY KEY,
-            thread_id TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            completed_at TEXT,
-            source_paths TEXT NOT NULL,
-            status TEXT NOT NULL,
-            total_transactions INTEGER DEFAULT 0,
-            total_duplicates INTEGER DEFAULT 0,
-            total_suspicious INTEGER DEFAULT 0,
-            base_currency TEXT NOT NULL DEFAULT 'USD'
-        );
-
-        CREATE TABLE IF NOT EXISTS transactions (
-            id TEXT PRIMARY KEY,
-            run_id TEXT NOT NULL,
-            fingerprint TEXT NOT NULL,
-            date TEXT NOT NULL,
-            amount_original REAL NOT NULL,
-            amount_base REAL,
-            currency TEXT NOT NULL,
-            merchant TEXT NOT NULL,
-            merchant_normalized TEXT NOT NULL,
-            account TEXT NOT NULL,
-            source_file TEXT NOT NULL,
-            category TEXT,
-            duplicate_of TEXT,
-            suspicious INTEGER NOT NULL DEFAULT 0,
-            suspicious_reason TEXT,
-            needs_review INTEGER NOT NULL DEFAULT 0,
-            review_reason TEXT,
-            review_status TEXT,
-            confidence REAL,
-            FOREIGN KEY (run_id) REFERENCES runs_history(run_id)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_transactions_run_id
-            ON transactions(run_id);
-        CREATE INDEX IF NOT EXISTS idx_transactions_fingerprint
-            ON transactions(fingerprint);
-
-        CREATE TABLE IF NOT EXISTS merchant_categories (
-            merchant_normalized TEXT PRIMARY KEY,
-            category TEXT NOT NULL,
-            source TEXT NOT NULL DEFAULT 'llm',
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS duplicate_pairs (
-            fingerprint_a TEXT NOT NULL,
-            fingerprint_b TEXT NOT NULL,
-            is_duplicate INTEGER NOT NULL,
-            reason TEXT,
-            PRIMARY KEY (fingerprint_a, fingerprint_b)
-        );
-
-        CREATE TABLE IF NOT EXISTS schema_version (
-            version INTEGER PRIMARY KEY
-        );
-    """)
-    conn.commit()
-    _migrate(conn)
+def get_session_factory() -> sessionmaker[Session]:
+    """Return the shared session factory."""
+    global _SessionFactory
+    if _SessionFactory is None:
+        _SessionFactory = sessionmaker(bind=get_engine())
+    return _SessionFactory
 
 
-def _migrate(conn: sqlite3.Connection) -> None:
-    """Run pending migrations in order. Each migration N runs when current version < N."""
-    cur = conn.execute("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1")
-    row = cur.fetchone()
-    cur.close()
-    current = row[0] if row else 0
-
-    if current < 1:
-        # Migration 1: bootstrap (schema already created by ensure_schema)
-        conn.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
-        conn.commit()
-
-    if current < 2:
-        conn.executescript("""
-            CREATE INDEX IF NOT EXISTS idx_transactions_date
-                ON transactions(date);
-            CREATE INDEX IF NOT EXISTS idx_transactions_account
-                ON transactions(account);
-            CREATE INDEX IF NOT EXISTS idx_transactions_category
-                ON transactions(category);
-            CREATE INDEX IF NOT EXISTS idx_transactions_run_date
-                ON transactions(run_id, date);
-        """)
-        conn.execute("INSERT INTO schema_version (version) VALUES (2)")
-        conn.commit()
-
-    if current < 3:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS user_goals (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                content   TEXT NOT NULL,
-                active    INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS insights_cache (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date_from TEXT NOT NULL,
-                date_to TEXT NOT NULL,
-                accounts_hash TEXT NOT NULL,
-                aggregations_json TEXT NOT NULL,
-                habits_json TEXT NOT NULL,
-                suggestions_json TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                UNIQUE(date_from, date_to, accounts_hash)
-            );
-        """)
-        conn.execute("INSERT INTO schema_version (version) VALUES (3)")
-        conn.commit()
-
-    if current < 4:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS receipts (
-                id TEXT PRIMARY KEY,
-                run_id TEXT NOT NULL,
-                transaction_id TEXT,
-                source_file TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                merchant TEXT NOT NULL,
-                merchant_normalized TEXT NOT NULL,
-                date TEXT,
-                currency TEXT,
-                subtotal REAL,
-                tax_amount REAL,
-                tax_rate REAL,
-                total REAL NOT NULL,
-                receipt_number TEXT,
-                confidence REAL,
-                raw_content TEXT,
-                FOREIGN KEY (run_id) REFERENCES runs_history(run_id),
-                FOREIGN KEY (transaction_id) REFERENCES transactions(id)
-            );
-
-            CREATE TABLE IF NOT EXISTS receipt_lines (
-                id TEXT PRIMARY KEY,
-                receipt_id TEXT NOT NULL,
-                line_number INTEGER NOT NULL,
-                description TEXT NOT NULL,
-                quantity REAL DEFAULT 1,
-                unit_price REAL,
-                amount REAL NOT NULL,
-                category TEXT,
-                FOREIGN KEY (receipt_id) REFERENCES receipts(id)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_receipts_run_id
-                ON receipts(run_id);
-            CREATE INDEX IF NOT EXISTS idx_receipts_transaction_id
-                ON receipts(transaction_id);
-            CREATE INDEX IF NOT EXISTS idx_receipt_lines_receipt_id
-                ON receipt_lines(receipt_id);
-        """)
-        conn.execute("INSERT INTO schema_version (version) VALUES (4)")
-        conn.commit()
+def get_session() -> Session:
+    """Create and return a new SQLAlchemy session (caller owns lifecycle)."""
+    return get_session_factory()()
 
 
-def get_checkpointer() -> SqliteSaver:
-    """Return a SqliteSaver using a dedicated checkpoint connection (same DB file, WAL mode).
+def run_migrations() -> None:
+    """Run pending Alembic migrations (called at app startup)."""
+    from alembic import command
+    from alembic.config import Config
 
-    Avoids SystemError when fan-out runs multiple threads writing checkpoints.
+    # alembic.ini lives at the project root (three levels above this file)
+    project_root = Path(__file__).resolve().parents[3]
+    alembic_ini = project_root / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini))
+    alembic_cfg.set_main_option("sqlalchemy.url", _sa_url(get_database_url()))
+    # Override script_location with absolute path so it works from any CWD
+    alembic_cfg.set_main_option(
+        "script_location", str(project_root / "src" / "shared" / "db" / "alembic")
+    )
+    command.upgrade(alembic_cfg, "head")
+
+
+def get_checkpointer() -> Any:
+    """Return a LangGraph checkpointer backed by the configured database.
+
+    SQLite: dedicated raw sqlite3 connection (avoids concurrent commit conflicts).
+    PostgreSQL: PostgresSaver from langgraph-checkpoint-postgres.
     """
-    return SqliteSaver(_get_checkpoint_connection(), serde=_CHECKPOINT_SERDE)
+    global _checkpoint_conn, _pg_checkpointer
+    url = get_database_url()
+    if _is_sqlite(url):
+        if _checkpoint_conn is None:
+            db_path = url.replace("sqlite:///", "")
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+            _checkpoint_conn = sqlite3.connect(db_path, check_same_thread=False)
+            _checkpoint_conn.execute("PRAGMA journal_mode=WAL;")
+        return SqliteSaver(_checkpoint_conn, serde=_CHECKPOINT_SERDE)
+    else:
+        if _pg_checkpointer is None:
+            import psycopg
+            from psycopg.rows import dict_row
+            from langgraph.checkpoint.postgres import PostgresSaver
+            conn = psycopg.connect(url, autocommit=True, prepare_threshold=0, row_factory=dict_row)
+            _pg_checkpointer = PostgresSaver(conn)
+            _pg_checkpointer.setup()
+        return _pg_checkpointer
