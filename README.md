@@ -18,7 +18,7 @@ The system is split into three independent LangGraph graphs registered in `langg
 
 A directed pipeline with fan-in/fan-out parallelism, conditional edges, and two human-in-the-loop interrupts:
 
-![Agent Architecture](https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/financial_reconciliator_graph.PNG)
+![Reconciliation Agent Architecture](https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/reconciliation_agent_graph.svg)
 
 | Node | Responsibility |
 |---|---|
@@ -41,11 +41,7 @@ Key graph patterns: `prepare_ingest` uses conditional edges to fan out into para
 
 A linear pipeline with a conditional cache bypass:
 
-```
-START → load_context → [cache valid?] → END (use cached results)
-                            ↓ stale
-                    compute_aggregations → generate_insights → persist_results → END
-```
+![Insights Agent Architecture](https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/insights_agent_graph.svg)
 
 | Node | Responsibility |
 |---|---|
@@ -58,13 +54,7 @@ START → load_context → [cache valid?] → END (use cached results)
 
 A ReAct agent with a tool-calling loop *(v0.8 — in progress)*:
 
-```
-START → llm_node ←──────────────┐
-             ↓                   │
-       tool_calls? ──yes──→ tool_node
-             ↓ no
-            END
-```
+![Chat Agent Architecture](https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/chat_agent_graph.svg)
 
 Invoked independently on every user message. Receives aggregations and goals context from the UI session state (populated by a prior insights run). Has access to all DB query tools via `tools.py`.
 
