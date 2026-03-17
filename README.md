@@ -233,17 +233,21 @@ finance-intelligence-agent/
 │   │   │   ├── nodes.py            # Node implementations
 │   │   │   ├── state.py            # ReconciliationState, reducers, initial_state
 │   │   │   ├── configuration.py    # ReconciliationConfig
-│   │   │   ├── services/
-│   │   │   │   └── exchange_service.py
 │   │   │   └── utils/
 │   │   │       └── parsers.py      # PDF and XLSX document loaders
 │   │   │
-│   │   └── insights/               # Insights agent
-│   │       ├── graph.py            # Linear pipeline with cache conditional
-│   │       ├── nodes.py            # load_context, compute_aggregations, generate_insights, persist_results
-│   │       ├── state.py            # InsightsState
-│   │       ├── configuration.py    # InsightsConfig
-│   │       └── tools.py            # @tool wrappers over DatabaseService query methods
+│   │   ├── insights/               # Insights agent
+│   │   │   ├── graph.py            # Linear pipeline with cache conditional
+│   │   │   ├── nodes.py            # load_context, compute_aggregations, generate_insights, persist_results
+│   │   │   ├── state.py            # InsightsState
+│   │   │   ├── configuration.py    # InsightsConfig
+│   │   │   └── tools.py            # @tool wrappers over DatabaseService query methods
+│   │   │
+│   │   └── chat/                   # Chat agent
+│   │       ├── graph.py            # ReAct tool-calling loop
+│   │       ├── nodes.py            # llm_node, tool_node
+│   │       ├── state.py            # ChatState
+│   │       └── configuration.py    # ChatConfig
 │   │
 │   ├── shared/                     # Shared infrastructure across all agents
 │   │   ├── db/
@@ -253,23 +257,26 @@ finance-intelligence-agent/
 │   │   ├── models.py               # Pydantic models (Transaction, RawDocument, Receipt, InsightsOutput)
 │   │   └── services/
 │   │       ├── database_service.py # All SQL — single source of truth for DB operations
-│   │       └── exchange_service.py
+│   │       └── exchange_service.py # Historical exchange rate fetching
 │   │
 │   └── ui/
 │       └── app.py                  # Streamlit UI (reconciliation, insights, settings, history tabs)
 │
 ├── scripts/
-│   └── generate_samples.py         # Synthetic bank statement and receipt generator
+│   └── generate_samples.py         # Synthetic bank statement and receipt generator (also writes eval_labels.json)
 ├── tests/
-│   ├── unit_tests/
-│   └── integration_tests/
-├── data/
-│   └── statements/                 # Drop your bank statement files here
+│   ├── unit_tests/                 # Mocked unit tests (no API keys required)
+│   └── eval/                       # LLM accuracy evals (real API calls)
+│       ├── conftest.py             # Fixtures: labels loader, API key guard
+│       ├── helpers.py              # Transaction factory shared by eval tests
+│       ├── test_categorize_eval.py # Categorization accuracy (threshold: 75%)
+│       └── test_duplicate_eval.py  # Duplicate precision/recall (recall ≥ 90%, precision ≥ 85%)
+├── data/                           # Generated sample data and SQLite database
 ├── Dockerfile
 ├── docker-compose.yml
-├── .dockerignore
+├── dockerignore
 ├── alembic.ini
-├── langgraph.json                  # Registers reconciliation + insights graphs
+├── langgraph.json                  # Registers reconciliation, insights, and chat graphs
 ├── pyproject.toml
 ├── ROADMAP.md
 └── README.md
@@ -388,8 +395,11 @@ Each node writes its results to the database as it completes, rather than batchi
 ## Development
 
 ```bash
-# Run unit tests
+# Run unit tests (mocked, no API keys required)
 make test
+
+# Run LLM eval suite (requires OPENAI_API_KEY, makes real API calls)
+make eval
 
 # Lint and format
 make lint
@@ -397,6 +407,32 @@ make format
 
 # Spell check
 make spell_check
+```
+
+### Eval Suite
+
+`tests/eval/` contains node-level accuracy evals that measure LLM output quality against labeled synthetic data. Unlike unit tests, these make real API calls and are intentionally excluded from `make test` and CI.
+
+**How it works:**
+
+1. `scripts/generate_samples.py` writes `data/eval_labels.json` alongside the synthetic statement files. Labels are derived directly from the ground-truth constants in the script (`ITAU_TRANSACTIONS`, `BROU_TRANSACTIONS`, etc.) — expected categories, known duplicate pairs, and non-duplicate pairs are all extracted automatically.
+
+2. `make eval` loads those labels, builds `Transaction` objects, calls the real `categorize` and `detect_duplicates` nodes, and computes metrics.
+
+**Thresholds (from last run):**
+
+| Test | Metric | Threshold | Last result |
+|---|---|---|---|
+| `test_categorize_accuracy` | Accuracy | ≥ 75% | 89.9% |
+| `test_duplicate_precision_recall` | Recall | ≥ 90% | 100% |
+| `test_duplicate_precision_recall` | Precision | ≥ 85% | 100% |
+
+Matching uses case-insensitive substring comparison plus a semantic equivalents map for known synonyms (`Healthcare` ↔ `Fitness`, `Salary` ↔ `Freelance`, `Transfer` ↔ `Other Income`, `Fees & Charges` ↔ `Other`). Duplicate detection uses union-find clustering so transitive groups (A→B and A→C implies B≡C) are handled correctly.
+
+To regenerate labels after changing the synthetic data:
+
+```bash
+python scripts/generate_samples.py
 ```
 
 ---

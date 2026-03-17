@@ -1,4 +1,4 @@
-.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests
+.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests eval
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -7,7 +7,10 @@ all: help
 TEST_FILE ?= tests/unit_tests/
 
 test:
-	python -m pytest $(TEST_FILE)
+	python -m pytest $(TEST_FILE) -m "not eval"
+
+eval:
+	python -m pytest tests/eval/ -v --tb=short -m eval -s
 
 integration_tests:
 	python -m pytest tests/integration_tests 
@@ -64,4 +67,5 @@ help:
 	@echo 'tests                        - run unit tests'
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
 	@echo 'test_watch                   - run unit tests in watch mode'
+	@echo 'eval                         - run LLM eval suite (requires OPENAI_API_KEY)'
 

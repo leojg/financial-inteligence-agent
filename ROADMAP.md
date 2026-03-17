@@ -134,17 +134,20 @@ Users can ask broad questions answered from pre-loaded insights context, or dril
 
 ---
 
-## v1.0 — Public Release 🚀
+## v1.0 — Public Release ✅
 
 *Goal: polished, documented, deployable.*
 
 A stable release suitable for personal use and public showcase. Focused on packaging, deployment, and end-to-end user experience.
 
-**Planned:**
+**Delivered:**
 - Docker Compose setup for one-command local deployment
 - Full README with architecture deep-dive, design decisions, and limitations
-- End-to-end demo video
 - Evaluation suite: accuracy metrics for categorization and duplicate detection against labeled synthetic data
+
+**Planned**
+- End-to-end demo video
+
 
 ---
 

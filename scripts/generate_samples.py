@@ -7,6 +7,7 @@ Usage:
 """
 
 import argparse
+import json
 import logging
 import textwrap
 from datetime import date, timedelta
@@ -66,7 +67,7 @@ ITAU_TRANSACTIONS = [
 # BROU - Caja de Ahorros (UYU) — XLSX
 BROU_TRANSACTIONS = [
     ("2026-01-01", "SALDO ANTERIOR",              15000.00, "UYU", "Other Income"),
-    ("2026-01-03", "PAGO ALQUILER",               -18500.00,"UYU", "Utilities"),
+    ("2026-01-03", "PAGO ALQUILER",               -18500.00,"UYU", "Rent"),
     ("2026-01-05", "TRANSFER FROM ITAU",           8000.00, "UYU", "Transfer"),
     ("2026-01-06", "SUPERMERCADO DISCO",          -1950.00, "UYU", "Groceries"),
     ("2026-01-08", "ABITAB PAGO SERVICIOS",       -1200.00, "UYU", "Utilities"),
@@ -90,29 +91,29 @@ BROU_TRANSACTIONS = [
 
 # Wise - USD Account (USD) — PDF
 WISE_TRANSACTIONS = [
-    ("2026-01-02", "GITHUB COPILOT",               -10.00,  "USD", "Education"),
-    ("2026-01-03", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Utilities"),
+    ("2026-01-02", "GITHUB COPILOT",               -10.00,  "USD", "Fees & Charges"),
+    ("2026-01-03", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Fees & Charges"),
     ("2026-01-05", "REMOTE JOB PAYMENT JAN",      1800.00,  "USD", "Salary"),
-    ("2026-01-06", "ADOBE CREATIVE CLOUD",         -54.99,  "USD", "Shopping"),
-    ("2026-01-07", "NAMECHEAP DOMAIN",             -15.88,  "USD", "Utilities"),
-    ("2026-01-08", "CHATGPT PLUS",                 -20.00,  "USD", "Education"),
-    ("2026-01-10", "AMAZON WEB SERVICES",          -38.42,  "USD", "Utilities"),
+    ("2026-01-06", "ADOBE CREATIVE CLOUD",         -54.99,  "USD", "Fees & Charges"),
+    ("2026-01-07", "NAMECHEAP DOMAIN",             -15.88,  "USD", "Fees & Charges"),
+    ("2026-01-08", "CHATGPT PLUS",                 -20.00,  "USD", "Fees & Charges"),
+    ("2026-01-10", "AMAZON WEB SERVICES",          -38.42,  "USD", "Fees & Charges"),
     ("2026-01-12", "UDEMY COURSE PURCHASE",        -29.99,  "USD", "Education"),
-    ("2026-01-14", "FIGMA PROFESSIONAL",           -15.00,  "USD", "Education"),
+    ("2026-01-14", "FIGMA PROFESSIONAL",           -15.00,  "USD", "Fees & Charges"),
     ("2026-01-15", "TRANSFER TO LOCAL BANK",      -500.00,  "USD", "Transfer"),
-    ("2026-01-16", "NOTION TEAM PLAN",             -16.00,  "USD", "Education"),
-    ("2026-01-17", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Utilities"),
+    ("2026-01-16", "NOTION TEAM PLAN",             -16.00,  "USD", "Fees & Charges"),
+    ("2026-01-17", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Fees & Charges"),
     ("2026-01-18", "UPWORK FREELANCE INCOME",      620.00,  "USD", "Freelance"),
-    ("2026-01-20", "GITHUB COPILOT",               -10.00,  "USD", "Education"),
-    ("2026-01-21", "ANTHROPIC API USAGE",          -42.80,  "USD", "Education"),
-    ("2026-01-22", "ZOOM SUBSCRIPTION",            -15.99,  "USD", "Utilities"),
-    ("2026-01-23", "AMAZON WEB SERVICES",          -41.17,  "USD", "Utilities"),
-    ("2026-01-24", "1PASSWORD FAMILY",              -4.99,  "USD", "Utilities"),
+    ("2026-01-20", "GITHUB COPILOT",               -10.00,  "USD", "Fees & Charges"),
+    ("2026-01-21", "ANTHROPIC API USAGE",          -42.80,  "USD", "Fees & Charges"),
+    ("2026-01-22", "ZOOM SUBSCRIPTION",            -15.99,  "USD", "Fees & Charges"),
+    ("2026-01-23", "AMAZON WEB SERVICES",          -41.17,  "USD", "Fees & Charges"),
+    ("2026-01-24", "1PASSWORD FAMILY",              -4.99,  "USD", "Fees & Charges"),
     ("2026-01-25", "UPWORK FREELANCE INCOME",      480.00,  "USD", "Freelance"),
-    ("2026-01-27", "ANTHROPIC API USAGE",         -189.40,  "USD", "Education"),
-    ("2026-01-28", "TAILSCALE VPN",                -18.00,  "USD", "Utilities"),
-    ("2026-01-30", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Utilities"),
-    ("2026-01-31", "GITHUB COPILOT",               -10.00,  "USD", "Education"),
+    ("2026-01-27", "ANTHROPIC API USAGE",         -189.40,  "USD", "Fees & Charges"),
+    ("2026-01-28", "TAILSCALE VPN",                -18.00,  "USD", "Fees & Charges"),
+    ("2026-01-30", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Fees & Charges"),
+    ("2026-01-31", "GITHUB COPILOT",               -10.00,  "USD", "Fees & Charges"),
 ]
 
 # VISA Credit Card — PDF
@@ -1383,6 +1384,97 @@ def generate_receipts_images(all_transactions: dict, out: str, start: date, end:
         browser.close()
 
 
+# ── Eval labels ──────────────────────────────────────────────────────────────
+
+def write_eval_labels(out_dir: Path, start: date, end: date) -> None:
+    """Write data/eval_labels.json with categorization and duplicate labels."""
+    accounts = {
+        "Itaú Corriente": shift_transactions(ITAU_TRANSACTIONS, start, end),
+        "BROU Ahorros":   shift_transactions(BROU_TRANSACTIONS, start, end),
+        "Wise USD":        shift_transactions(WISE_TRANSACTIONS, start, end),
+        "VISA Credit":     shift_transactions(VISA_TRANSACTIONS, start, end),
+    }
+
+    # 1. Categorization labels — one entry per transaction, all accounts
+    categorization = []
+    for account, txns in accounts.items():
+        for d, merchant, amount, currency, category in txns:
+            categorization.append({
+                "date":              d,
+                "merchant":          merchant,
+                "amount":            amount,
+                "currency":          currency,
+                "account":           account,
+                "expected_category": category,
+            })
+
+    # 2. Flatten all transactions for cross-account pairing
+    all_txns: list[dict] = []
+    for account, txns in accounts.items():
+        for d, merchant, amount, currency, _cat in txns:
+            all_txns.append({
+                "date":     d,
+                "merchant": merchant,
+                "amount":   amount,
+                "currency": currency,
+                "account":  account,
+            })
+
+    # 3. Cross-account pairing: same merchant + same currency, different accounts
+    duplicate_pairs: list[dict] = []
+    non_duplicate_pairs: list[dict] = []
+    seen_keys: set[tuple] = set()
+
+    for i, t_a in enumerate(all_txns):
+        for t_b in all_txns[i + 1:]:
+            if t_a["account"] == t_b["account"]:
+                continue
+            if t_a["currency"] != t_b["currency"]:
+                continue
+            if t_a["merchant"] != t_b["merchant"]:
+                continue
+            if t_a["amount"] != t_b["amount"]:
+                continue
+
+            # Canonical key to avoid emitting the same pair twice
+            key = tuple(sorted([
+                (t_a["date"], t_a["merchant"], t_a["amount"], t_a["account"]),
+                (t_b["date"], t_b["merchant"], t_b["amount"], t_b["account"]),
+            ]))
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+
+            days_apart = abs(
+                (date.fromisoformat(t_a["date"]) - date.fromisoformat(t_b["date"])).days
+            )
+
+            if days_apart <= 3:
+                duplicate_pairs.append({
+                    "transaction_a": t_a,
+                    "transaction_b": t_b,
+                    "is_duplicate":  True,
+                })
+            elif len(non_duplicate_pairs) < 10:
+                # Same merchant + amount but far apart in time — ambiguous but NOT a dup
+                non_duplicate_pairs.append({
+                    "transaction_a": t_a,
+                    "transaction_b": t_b,
+                    "is_duplicate":  False,
+                })
+
+    labels = {
+        "categorization":     categorization,
+        "duplicate_pairs":    duplicate_pairs,
+        "non_duplicate_pairs": non_duplicate_pairs,
+    }
+
+    labels_path = out_dir / "eval_labels.json"
+    labels_path.write_text(json.dumps(labels, indent=2))
+    logger.info("Eval labels written to %s (%d categorization, %d dup pairs, %d non-dup pairs)",
+                labels_path, len(categorization), len(duplicate_pairs), len(non_duplicate_pairs))
+
+
 # ── CLI entry point ──────────────────────────────────────────────────────────
 
 def parse_args():
@@ -1466,6 +1558,10 @@ def main():
         }
         generate_receipts_pdf(all_tx, out, start, end)
         generate_receipts_images(all_tx, out, start, end)
+
+    # ── Eval labels ───────────────────────────────────────────────────────────
+    logger.info("\n── Eval labels ───────────────────────────────────")
+    write_eval_labels(Path(out), start, end)
 
     logger.info("\nDone. All files written to %s/", out)
 

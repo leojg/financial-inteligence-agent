@@ -47,6 +47,11 @@ where = ["src"]
 [tool.setuptools.package-data]
 "*" = ["py.typed"]
 
+[tool.pytest.ini_options]
+markers = [
+    "eval: LLM evaluation tests (require real API keys, slow — run with make eval)",
+]
+
 [tool.ruff]
 lint.select = [
     "E",    # pycodestyle
