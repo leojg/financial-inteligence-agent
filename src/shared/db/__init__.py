@@ -9,11 +9,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
-
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, sessionmaker
 
 _CHECKPOINT_SERDE = JsonPlusSerializer(
     allowed_json_modules=(
@@ -116,8 +115,8 @@ def get_checkpointer() -> Any:
     else:
         if _pg_checkpointer is None:
             import psycopg
-            from psycopg.rows import dict_row
             from langgraph.checkpoint.postgres import PostgresSaver
+            from psycopg.rows import dict_row
             conn = psycopg.connect(url, autocommit=True, prepare_threshold=0, row_factory=dict_row)
             _pg_checkpointer = PostgresSaver(conn)
             _pg_checkpointer.setup()

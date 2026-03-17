@@ -821,7 +821,7 @@ def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[
 
         database_service.upsert_receipts(receipt_rows)
         database_service.upsert_receipt_lines(line_rows)
-        linked = database_service.auto_link_receipts(run_id)
+        database_service.auto_link_receipts(run_id)
 
         database_service.update_run(
             run_id,

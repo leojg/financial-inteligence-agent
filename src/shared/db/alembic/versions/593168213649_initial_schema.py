@@ -1,4 +1,4 @@
-"""initial schema
+"""Initial schema.
 
 Revision ID: 593168213649
 Revises:
@@ -25,6 +25,7 @@ def _existing_tables() -> set[str]:
 
 
 def upgrade() -> None:
+    """Create all application tables if they do not already exist."""
     existing = _existing_tables()
 
     if 'exchange_rates' not in existing:
@@ -178,6 +179,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Drop all application tables."""
     op.drop_index('idx_receipt_lines_receipt_id', table_name='receipt_lines')
     op.drop_table('receipt_lines')
     op.drop_index('idx_receipts_transaction_id', table_name='receipts')

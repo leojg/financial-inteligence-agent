@@ -3,7 +3,8 @@
   "dependencies": ["."],
   "graphs": {
     "reconciliation": "./src/agents/reconciliator/graph.py:graph",
-    "insights": "./src/agents/insights/graph.py:graph"
+    "insights": "./src/agents/insights/graph.py:graph",
+    "chat": "./src/agents/chat/graph.py:graph"
   },
   "env": ".env",
   "image_distro": "wolfi",

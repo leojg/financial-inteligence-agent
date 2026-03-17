@@ -828,7 +828,7 @@ class DatabaseService:
                 """),
                 {"run_id": run_id},
             )
-            linked = result.rowcount
+            linked = result.rowcount  # type: ignore[attr-defined]
             session.commit()
         return linked
 

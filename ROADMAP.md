@@ -100,7 +100,7 @@ Receipt images currently turn every line item into a separate transaction instea
 
 ---
 
-## v0.7 — Database Architecture 🗄️
+## v0.7 — Database Architecture ✅
 
 *Goal: split the flat `transactions` table into a proper three-table schema and abstract the DB layer for multi-backend support.*
 
@@ -116,6 +116,24 @@ The current `transactions` table cannot represent receipts (which have a total a
 
 ---
 
+## v0.8 — Chat Agent ✅
+
+*Goal: add a conversational finance assistant that lets users ask natural language questions about their spending.*
+
+Users can ask broad questions answered from pre-loaded insights context, or drill down into specific merchants, categories, and transactions via tool calls. Implemented as a separate ReAct LangGraph graph with a tool-calling loop, registered independently in langgraph.json.
+
+**Delivered:**
+- Chat agent as an independent LangGraph graph: `load_context → chat ↔ tools → END`
+- ReAct loop using `ToolNode` — LLM autonomously decides when and which tools to call
+- System prompt injected with aggregations, habits, suggestions, and user goals from insights cache
+- Selective context inclusion: compact aggregations in prompt, granular data (receipt lines, fee transactions) available via tools
+- Full date range by default — LLM narrows tool queries only when the user specifies a time period
+- All 10 existing tools (5 aggregation + 5 narrow/chat-exclusive) bound to the agent
+- Chat UI integrated into the Insights tab with session state and checkpointer wiring
+- Registered in `langgraph.json` for LangGraph Studio debugging
+
+---
+
 ## v1.0 — Public Release 🚀
 
 *Goal: polished, documented, deployable.*
@@ -124,10 +142,8 @@ A stable release suitable for personal use and public showcase. Focused on packa
 
 **Planned:**
 - Docker Compose setup for one-command local deployment
-- Environment configuration via `.env` with documented variables
 - Full README with architecture deep-dive, design decisions, and limitations
 - End-to-end demo video
-- API key rotation and basic security hardening
 - Evaluation suite: accuracy metrics for categorization and duplicate detection against labeled synthetic data
 
 ---
@@ -136,6 +152,11 @@ A stable release suitable for personal use and public showcase. Focused on packa
 
 Ideas that are out of scope for the current roadmap but worth tracking:
 
+- **Chat message persistence** — Hybrid approach: store messages in a dedicated `chat_messages` table, load a sliding window (~20 messages) into state via `load_context`. Prevents checkpointer bloat from full message history serialization on every ReAct step. Enables searchable chat history and a conversation list sidebar in the UI.
+- **Chat message summarization** — Periodically condense older messages into a summary message to preserve long-range context without growing the token window. Complements the message windowing approach.
+- **Chat model routing** — Classifier-based routing between `gpt-4o-mini` (simple questions answerable from context or a single tool call) and `gpt-4o` (complex multi-step reasoning). Reduces cost for the majority of questions while preserving quality for hard ones.
+- **Chat date range filtering** — Allow the chat agent to operate on a scoped date range instead of always full range. Requires insights to always maintain a full-range cache alongside scoped runs.
+- **Insights cache relational refactor** — Split habits and suggestions out of the JSON blob in `insights_cache` into proper relational tables with typed columns (category, severity, observation). Enables querying by severity, tracking insight evolution across runs, and safer schema migrations.
 - **Crypto / Bitcoin mining income** — BTC transaction ingestion and cost basis tracking
 - **Budget vs actual** — compare reconciled spending against a defined monthly budget
 - **Web deployment** — hosted version with user accounts and cloud storage

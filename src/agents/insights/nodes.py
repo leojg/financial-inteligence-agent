@@ -11,10 +11,10 @@ from agents.insights.configuration import InsightsConfig
 from agents.insights.state import InsightsState
 from agents.insights.tools import (
     get_month_over_month_deltas,
+    get_receipt_line_breakdown,
     get_recurring_charges,
     get_spending_by_category,
     get_transfer_fees_summary,
-    get_receipt_line_breakdown,
 )
 from shared.models import InsightsOutput
 from shared.services.database_service import DatabaseService

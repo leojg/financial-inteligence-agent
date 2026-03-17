@@ -9,10 +9,10 @@ import datetime
 import html
 import json
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
-import uuid
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -77,6 +77,9 @@ def _init_session() -> None:
         "pending_resume": False,  # True when Resume was clicked; agent will run this cycle, button disabled
         "insights_state": None,       # last insights result (aggregations, habits, suggestions, date_from, date_to)
         "insights_graph_instance": None,  # cached compiled insights graph
+        "chat_graph_instance": None,  # cached compiled chat graph
+        "chat_messages": [],          # list of {"role": "user"|"assistant", "content": str}
+        "chat_conversation_id": str(uuid.uuid4()),
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -142,6 +145,20 @@ def _get_insights_graph() -> Any:
 
         st.session_state.insights_graph_instance = make_graph(checkpointer=None)
     return st.session_state.insights_graph_instance
+
+
+def _get_chat_graph() -> Any:
+    """Return the compiled chat graph instance, creating and caching it if needed."""
+    if st.session_state.chat_graph_instance is None:
+        from agents.chat.graph import make_graph
+
+        if "checkpointer" not in st.session_state:
+            st.session_state.checkpointer = get_checkpointer()
+
+        st.session_state.chat_graph_instance = make_graph(
+            checkpointer=st.session_state.checkpointer
+        )
+    return st.session_state.chat_graph_instance
 
 
 def _run_insights_graph(
@@ -1021,12 +1038,69 @@ def _render_insights_dashboard(state: dict[str, Any]) -> None:
             lines.append(f'<li class="severity-{sev}"><strong>{title}</strong> — {body}</li>')
         st.markdown(f"<ul>{''.join(lines)}</ul>", unsafe_allow_html=True)
 
-    with st.expander("Chat (coming soon)"):
-        st.caption("Chat with your insights will be available here in a future update.")
+    st.subheader("Chat")
+    _render_chat()
+
+
+def _render_chat() -> None:
+    """Render the chat interface backed by the ReAct chat agent."""
+    from langchain_core.messages import AIMessage, HumanMessage
+
+    db = DatabaseService()
+    if db.get_transaction_date_range(None) is None:
+        st.info("Run a reconciliation and generate insights before using the chat.")
+        return
+
+    # Display message history
+    for msg in st.session_state.chat_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("Ask about your finances…")
+    if not user_input:
+        return
+
+    # Show user message immediately
+    st.session_state.chat_messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    graph = _get_chat_graph()
+    config = {"configurable": {"thread_id": st.session_state.chat_conversation_id}}
+
+    # Build LangChain message history for graph input
+    lc_messages: list[Any] = []
+    for msg in st.session_state.chat_messages[:-1]:  # exclude the just-added user message
+        if msg["role"] == "user":
+            lc_messages.append(HumanMessage(content=msg["content"]))
+        else:
+            lc_messages.append(AIMessage(content=msg["content"]))
+    lc_messages.append(HumanMessage(content=user_input))
+
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking…"):
+            try:
+                result = graph.invoke(
+                    {"messages": lc_messages, "conversation_id": st.session_state.chat_conversation_id},
+                    config=config,
+                )
+                last = result["messages"][-1]
+                reply = last.content if hasattr(last, "content") else str(last)
+            except Exception as e:
+                reply = f"Sorry, I ran into an error: {e}"
+
+        st.markdown(reply)
+
+    st.session_state.chat_messages.append({"role": "assistant", "content": reply})
+
+    if st.button("Clear conversation", key="chat_clear"):
+        st.session_state.chat_messages = []
+        st.session_state.chat_conversation_id = str(uuid.uuid4())
+        st.rerun()
 
 
 def render_insights_tab() -> None:
-    """Render the Insights tab: run controls, optional load cached, dashboard, chat placeholder."""
+    """Render the Insights tab: run controls, optional load cached, dashboard, chat."""
     # When no insights in session, show latest cache if one exists
     if st.session_state.insights_state is None:
         latest = DatabaseService().get_latest_insights_cache()
