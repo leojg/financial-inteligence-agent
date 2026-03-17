@@ -92,6 +92,7 @@ ignore_missing_imports = true
 [dependency-groups]
 dev = [
     "anyio>=4.7.0",
+    "codespell>=2.3.0",
     "langgraph-cli[inmem]>=0.4.12",
     "mypy>=1.13.0",
     "pandas-stubs>=2.2.0",

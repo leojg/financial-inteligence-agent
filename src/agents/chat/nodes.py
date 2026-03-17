@@ -33,7 +33,7 @@ def load_context(state: ChatState) -> dict:
         + "\n".join(f"- {goal['content']}" for goal in goals)
     ) if goals else None
 
-    # Trimming out larger aggegations to keep token size smaller
+    # Trimming out larger aggregations to keep token size smaller
     aggregations = insights_cache["aggregations"]
 
     # Trim transfer fees, keep totals, drop individual transactions
