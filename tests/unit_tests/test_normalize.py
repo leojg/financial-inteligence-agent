@@ -9,38 +9,20 @@ from unittest.mock import MagicMock, patch
 from uuid import UUID
 
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import text
 
 import shared.db as _db
 from agents.reconciliator.configuration import DEFAULT_CONFIG
 from agents.reconciliator.nodes import make_normalize_node
-from shared.db.models import Base
 from shared.models import RawDocument
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture()
-def in_memory_session(monkeypatch: pytest.MonkeyPatch):
-    """Patch shared.db to use an in-memory SQLite engine with all tables created.
-
-    StaticPool ensures all sessions share the same underlying connection, so
-    data inserted in this fixture's session is visible inside the node under test.
-    """
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
-    Factory: sessionmaker = sessionmaker(bind=engine)
-
-    monkeypatch.setattr(_db, "_engine", engine)
-    monkeypatch.setattr(_db, "_SessionFactory", Factory)
-
-    with Factory() as session:
+def in_memory_session():
+    """Return a session backed by the already-patched in-memory engine (from conftest autouse)."""
+    with _db.get_session() as session:
         yield session
 
 

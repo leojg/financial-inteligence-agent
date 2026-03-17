@@ -181,7 +181,7 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
                         ReceiptLine(
                             description=line.get("description", ""),
                             amount=float(line.get("amount", 0.0)),
-                            quantity=line.get("quantity") or 1.0,
+                            quantity=float(line.get("quantity") or 1.0),
                         )
                         for line in lines_raw
                         if isinstance(line, dict)
