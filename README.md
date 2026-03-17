@@ -1,5 +1,7 @@
 # Finance Intelligence Agent
 
+![Version](https://img.shields.io/badge/version-v1.0-blue)
+
 An AI agent system for personal finance intelligence built on LangGraph. It ingests bank statements and receipts from multiple accounts, normalizes and categorizes transactions, detects duplicates and suspicious activity across sources, produces structured reconciliation reports, and surfaces spending patterns and financial insights over time — with human-in-the-loop review steps throughout.
 
 The system is composed of three independent LangGraph graphs — **Reconciliation**, **Insights**, and **Chat** — connected through a shared database layer. Each graph has a distinct data source and invocation lifecycle, but they all operate on the same persistent transaction history.

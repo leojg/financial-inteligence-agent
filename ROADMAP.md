@@ -106,7 +106,7 @@ Receipt images currently turn every line item into a separate transaction instea
 
 The current `transactions` table cannot represent receipts (which have a total and N line items), and is tightly coupled to SQLite, making production deployments difficult.
 
-**Planned:**
+**Delivered:**
 - Split into three tables: `statements` (bank rows), `receipts` (receipt totals), `receipt_lines` (line items FK → receipts) via DB migration version 2 ([#39](https://github.com/leojg/financial-inteligence-agent/issues/39))
 - Replace raw `sqlite3` with SQLAlchemy `Engine`; introduce `DATABASE_URL` env var supporting SQLite (default) and PostgreSQL ([#40](https://github.com/leojg/financial-inteligence-agent/issues/40))
 - `generate_report` writes to `statements` or `receipts`/`receipt_lines` based on source type
@@ -144,8 +144,6 @@ A stable release suitable for personal use and public showcase. Focused on packa
 - Docker Compose setup for one-command local deployment
 - Full README with architecture deep-dive, design decisions, and limitations
 - Evaluation suite: accuracy metrics for categorization and duplicate detection against labeled synthetic data
-
-**Planned**
 - End-to-end demo video
 
 
