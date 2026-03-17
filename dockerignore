@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+venv/
+.venv/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment (user creates their own, passed via env_file)
+.env
+
+# Dev tooling
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Docker (don't copy Docker config into the image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docs & static assets (not needed at runtime)
+static/
+*.md
+LICENSE
+
+# Tests (not needed at runtime)
+tests/
+
+# Scripts that need playwright/browser (not available in container)
+scripts/

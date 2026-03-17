@@ -1,0 +1,66 @@
+services:
+
+  # ── Streamlit UI ──────────────────────────────────────────────────
+  # Main user-facing interface: reconciliation, insights, settings.
+  # http://localhost:8501
+
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      studio:
+        condition: service_started
+        required: false
+    restart: unless-stopped
+
+  # ── LangGraph Studio API ──────────────────────────────────────────
+  # Runs the LangGraph dev server in-memory (no Docker-in-Docker).
+  # Open LangGraph Studio desktop app → connect to http://localhost:8123
+  # All three graphs (reconciliation, insights, chat) are visible.
+
+  studio:
+    build: .
+    ports:
+      - "8123:8123"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    command: >
+      langgraph dev
+      --host 0.0.0.0
+      --port 8123
+      --no-browser
+    restart: unless-stopped
+
+  # ── Optional: PostgreSQL backend ──────────────────────────────────
+  # Start with: docker compose --profile postgres up
+  #
+  # Add to your .env:
+  #   DATABASE_URL=postgresql://finance:finance@postgres:5432/finance_agent
+
+  postgres:
+    image: postgres:16-alpine
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+      POSTGRES_DB: finance_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance -d finance_agent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
