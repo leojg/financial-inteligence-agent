@@ -92,12 +92,12 @@ def test_duplicate_precision_recall(duplicate_pairs_labels, non_duplicate_pairs_
         ["Recall",                           f"{recall:.1%}"],
         ["Precision",                        f"{precision:.1%}"],
     ]
-    print("\nDuplicate Detection Results:")
-    print(tabulate(table, tablefmt="simple"))
 
     assert recall >= RECALL_THRESHOLD, (
-        f"Recall {recall:.1%} is below threshold {RECALL_THRESHOLD:.0%}"
+        "Duplicate recall below threshold.\n"
+        + tabulate(table, tablefmt="simple")
     )
     assert precision >= PRECISION_THRESHOLD, (
-        f"Precision {precision:.1%} is below threshold {PRECISION_THRESHOLD:.0%}"
+        "Duplicate precision below threshold.\n"
+        + tabulate(table, tablefmt="simple")
     )

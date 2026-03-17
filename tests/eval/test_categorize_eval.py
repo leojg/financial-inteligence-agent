@@ -26,7 +26,6 @@ SEMANTIC_EQUIVALENTS: dict[str, set[str]] = {
 def test_categorize_accuracy(categorization_labels):
     """Assert LLM categorization accuracy >= 80% against labeled transactions."""
     transactions = [make_transaction(entry) for entry in categorization_labels]
-    txn_by_id = {t.id: t for t in transactions}
 
     state = {
         "source_folder": "data",
@@ -65,11 +64,14 @@ def test_categorize_accuracy(categorization_labels):
     total = len(transactions)
     accuracy = correct / total if total > 0 else 0.0
 
-    print(f"\nCategorization accuracy: {correct}/{total} = {accuracy:.1%}")
-    if mismatches:
-        print("\nMismatches:")
-        print(tabulate(mismatches, headers=["Merchant", "Account", "Expected", "Actual"]))
-
     assert accuracy >= ACCURACY_THRESHOLD, (
-        f"Categorization accuracy {accuracy:.1%} is below threshold {ACCURACY_THRESHOLD:.0%}"
+        "Categorization accuracy below threshold.\n"
+        f"- accuracy: {correct}/{total} = {accuracy:.1%}\n"
+        f"- threshold: {ACCURACY_THRESHOLD:.0%}\n"
+        + (
+            "\nMismatches:\n"
+            + tabulate(mismatches, headers=["Merchant", "Account", "Expected", "Actual"])
+            if mismatches
+            else ""
+        )
     )
