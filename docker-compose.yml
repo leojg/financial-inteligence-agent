@@ -1,9 +1,6 @@
 services:
 
   # ── Streamlit UI ──────────────────────────────────────────────────
-  # Main user-facing interface: reconciliation, insights, settings.
-  # http://localhost:8501
-
   app:
     build: .
     ports:
@@ -13,16 +10,11 @@ services:
     volumes:
       - ./data:/app/data
     depends_on:
-      studio:
-        condition: service_started
-        required: false
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # ── LangGraph Studio API ──────────────────────────────────────────
-  # Runs the LangGraph dev server in-memory (no Docker-in-Docker).
-  # Open LangGraph Studio desktop app → connect to http://localhost:8123
-  # All three graphs (reconciliation, insights, chat) are visible.
-
   studio:
     build: .
     ports:
@@ -36,18 +28,14 @@ services:
       --host 0.0.0.0
       --port 8123
       --no-browser
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
-  # ── Optional: PostgreSQL backend ──────────────────────────────────
-  # Start with: docker compose --profile postgres up
-  #
-  # Add to your .env:
-  #   DATABASE_URL=postgresql://finance:finance@postgres:5432/finance_agent
-
+  # ── PostgreSQL ────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    profiles:
-      - postgres
     environment:
       POSTGRES_USER: finance
       POSTGRES_PASSWORD: finance
@@ -61,6 +49,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ── FastAPI — programmatic access ─────────────────────────────────
+  # Start with: docker compose --profile api up
+  # http://localhost:8000 | Swagger docs at http://localhost:8000/docs
+  api:
+    build: .
+    profiles:
+      - api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:

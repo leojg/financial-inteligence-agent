@@ -19,8 +19,12 @@ from agents.reconciliator.configuration import ReconciliationConfig
 from agents.reconciliator.state import ReconciliationState
 from agents.reconciliator.utils.parsers import load_documents
 from shared.models import RawDocument, Receipt, ReceiptLine, Transaction
-from shared.services.database_service import DatabaseService
-from shared.services.exchange_service import ExchangeService
+from shared.repositories.database_repository import (
+    DatabaseRepository as DatabaseService,
+)
+from shared.repositories.exchange_repository import (
+    ExchangeRepository as ExchangeService,
+)
 
 logger = logging.getLogger(__name__)
 

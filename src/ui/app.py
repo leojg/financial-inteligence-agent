@@ -24,7 +24,9 @@ import streamlit as st  # noqa: E402
 
 from agents.reconciliator.configuration import DEFAULT_CONFIG  # noqa: E402
 from shared.db import get_checkpointer, run_migrations  # noqa: E402
-from shared.services.database_service import DatabaseService  # noqa: E402
+from shared.repositories.database_repository import (  # noqa: E402
+    DatabaseRepository as DatabaseService,
+)
 
 run_migrations()
 

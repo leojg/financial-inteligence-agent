@@ -17,7 +17,9 @@ from agents.insights.tools import (
     get_transfer_fees_summary,
 )
 from shared.models import InsightsOutput
-from shared.services.database_service import DatabaseService
+from shared.repositories.database_repository import (
+    DatabaseRepository as DatabaseService,
+)
 
 
 def load_context(state: InsightsState) -> dict[str, Any]:

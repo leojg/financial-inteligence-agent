@@ -16,7 +16,9 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from shared.services.database_service import DatabaseService
+from shared.repositories.database_repository import (
+    DatabaseRepository as DatabaseService,
+)
 
 # ── Aggregation tools ─────────────────────────────────────────────────────────
 # Called by the pipeline's compute_aggregations node.

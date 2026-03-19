@@ -61,8 +61,13 @@ def _make_has_low_confidence(threshold: float) -> Callable[[ReconciliationState]
 def make_graph(
     config: ReconciliationConfig = DEFAULT_CONFIG,
     checkpointer: Any = None,
+    interrupt_before: list[str] | None = None,
 ) -> Any:
     """Build and compile the reconciliation StateGraph with optional checkpointer."""
+    # Default to the two review nodes if not explicitly set
+    if interrupt_before is None:
+        interrupt_before = ["review_low_confidence_transactions", "human_review"]
+
     graph = StateGraph(ReconciliationState)
 
     graph.add_node("prepare_ingest", prepare_ingest)
@@ -127,7 +132,7 @@ def make_graph(
 
     return graph.compile(
         checkpointer=checkpointer,
-        interrupt_before=["review_low_confidence_transactions", "human_review"],
+        interrupt_before=interrupt_before,
     )
 
 graph = make_graph(checkpointer=None)

@@ -11,7 +11,7 @@ from shared.db import get_session
 logger = logging.getLogger(__name__)
 
 
-class ExchangeService:
+class ExchangeRepository:
     """Fetches FX rates from exchangerate.host and caches them in the app DB."""
 
     def __init__(self) -> None:

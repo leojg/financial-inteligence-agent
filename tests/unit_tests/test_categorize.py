@@ -63,7 +63,7 @@ def test_categorize_assigns_categories_from_llm_response(
         {"id": "tx-001", "category": "Groceries"},
         {"id": "tx-002", "category": "Dining"},
     ]
-    with patch("shared.services.database_service.DatabaseService.get_merchant_category", return_value=None):
+    with patch("shared.repositories.database_repository.DatabaseRepository.get_merchant_category", return_value=None):
         with patch("agents.reconciliator.nodes.ChatOpenAI") as MockLLM:
             mock_llm_instance = MockLLM.return_value
             mock_llm_instance.invoke.return_value.content = json.dumps(mock_response)
@@ -87,7 +87,7 @@ def test_categorize_marks_needs_review_when_llm_returns_null(
         {"id": "tx-001", "category": "Groceries"},
         {"id": "tx-002", "category": None},
     ]
-    with patch("shared.services.database_service.DatabaseService.get_merchant_category", return_value=None):
+    with patch("shared.repositories.database_repository.DatabaseRepository.get_merchant_category", return_value=None):
         with patch("agents.reconciliator.nodes.ChatOpenAI") as MockLLM:
             mock_llm_instance = MockLLM.return_value
             mock_llm_instance.invoke.return_value.content = json.dumps(mock_response)
@@ -106,7 +106,7 @@ def test_categorize_marks_batch_needs_review_on_json_error(
     config, state_with_transactions
 ):
     """LLM returns invalid JSON; batch is marked needs_review with batch failed reason."""
-    with patch("shared.services.database_service.DatabaseService.get_merchant_category", return_value=None):
+    with patch("shared.repositories.database_repository.DatabaseRepository.get_merchant_category", return_value=None):
         with patch("agents.reconciliator.nodes.ChatOpenAI") as MockLLM:
             mock_llm_instance = MockLLM.return_value
             mock_llm_instance.invoke.return_value.content = "not valid json"

@@ -1,10 +1,12 @@
 # Finance Intelligence Agent
 
-![Version](https://img.shields.io/badge/version-v1.0-blue)
+![Version](https://img.shields.io/badge/version-v1.1-blue)
 
 An AI agent system for personal finance intelligence built on LangGraph. It ingests bank statements and receipts from multiple accounts, normalizes and categorizes transactions, detects duplicates and suspicious activity across sources, produces structured reconciliation reports, and surfaces spending patterns and financial insights over time — with human-in-the-loop review steps throughout.
 
 The system is composed of three independent LangGraph graphs — **Reconciliation**, **Insights**, and **Chat** — connected through a shared database layer. Each graph has a distinct data source and invocation lifecycle, but they all operate on the same persistent transaction history.
+
+All three agents are accessible through a **Streamlit UI** for interactive use and a **FastAPI REST API** for programmatic access by external consumers (automation tools, MCP servers, OpenClaw skills, custom integrations).
 
 Built to demonstrate production-grade LLM orchestration patterns applied to real financial data problems.
 
@@ -14,7 +16,9 @@ Built to demonstrate production-grade LLM orchestration patterns applied to real
 
 ## Architecture
 
-The system is split into three independent LangGraph graphs registered in `langgraph.json`, all sharing the same SQLite/PostgreSQL database through a common `DatabaseService` layer.
+The system is split into three independent LangGraph graphs registered in `langgraph.json`, all sharing the same PostgreSQL database through a common `DatabaseRepository` layer.
+
+A **service layer** (`src/services/`) provides transport-agnostic orchestration — clean Python functions that compile graphs, invoke them, and return structured results. Both the Streamlit UI and the FastAPI API are thin adapters over this layer, and future transports (MCP server, OpenClaw skills) will follow the same pattern.
 
 ### Reconciliation Agent
 
@@ -54,7 +58,7 @@ A linear pipeline with a conditional cache bypass:
 
 ### Chat Agent
 
-A ReAct agent with a tool-calling loop *(v0.8 — in progress)*:
+A ReAct agent with a tool-calling loop:
 
 ![Chat Agent Architecture](https://raw.githubusercontent.com/leojg/financial-inteligence-agent/refs/heads/master/static/chat_agent_graph.svg)
 
@@ -67,6 +71,7 @@ Invoked independently on every user message. Receives aggregations and goals con
 - **[LangGraph](https://github.com/langchain-ai/langgraph)** — agent orchestration, state management, and checkpointing
 - **[LangChain OpenAI](https://github.com/langchain-ai/langchain)** — LLM integration (`gpt-4o-mini` for extraction/classification, `gpt-4o` for insights synthesis)
 - **[LangChain Anthropic](https://github.com/langchain-ai/langchain)** — vision model integration (Claude Sonnet for receipt OCR)
+- **[FastAPI](https://fastapi.tiangolo.com)** — REST API for programmatic access
 - **[SQLAlchemy](https://www.sqlalchemy.org)** + **[Alembic](https://alembic.sqlalchemy.org)** — database abstraction and schema migrations, supporting SQLite (default) and PostgreSQL
 - **[Streamlit](https://streamlit.io)** — UI for running agents, reviewing results, and exploring insights
 - **[LangGraph Studio](https://github.com/langchain-ai/langgraph-studio)** — visual graph debugging (all three graphs visible independently)
@@ -93,6 +98,7 @@ Edit `.env` and add your API keys:
 ```env
 OPENAI_API_KEY=sk-...
 EXCHANGE_RATE_API_KEY=...       # from exchangerate.host
+DATABASE_URL=postgresql://finance:finance@postgres:5432/finance_agent
 ```
 
 **2. Start the services**
@@ -101,30 +107,28 @@ EXCHANGE_RATE_API_KEY=...       # from exchangerate.host
 docker compose up
 ```
 
-This builds the image and starts two services:
+This builds the image and starts three services:
 
 | Service | URL | Purpose |
 |---|---|---|
 | Streamlit UI | [http://localhost:8501](http://localhost:8501) | Main interface — run agents, review transactions, explore insights |
 | LangGraph Studio API | [http://localhost:8123](http://localhost:8123) | Graph debugger — open [LangGraph Studio](https://github.com/langchain-ai/langgraph-studio) desktop app and connect to this URL |
+| PostgreSQL | `localhost:5432` | Primary database — schema migrations run automatically on startup |
 
-Sample data is included in the repo and available immediately. The SQLite database and any uploaded files persist in the `./data` directory across container restarts.
-
-**3. (Optional) Use PostgreSQL instead of SQLite**
-
-Add to your `.env`:
-
-```env
-DATABASE_URL=postgresql://finance:finance@postgres:5432/finance_agent
-```
-
-Then start with the Postgres profile:
+**3. (Optional) Start the REST API**
 
 ```bash
-docker compose --profile postgres up
+docker compose --profile api up
 ```
 
-This spins up a PostgreSQL container alongside the app. Schema migrations run automatically on startup.
+This adds the FastAPI service alongside the existing ones:
+
+| Service | URL | Purpose |
+|---|---|---|
+| REST API | [http://localhost:8000](http://localhost:8000) | Programmatic access — for automation tools, MCP servers, OpenClaw skills |
+| Swagger docs | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive API documentation |
+
+Sample data is included in the repo and available immediately. The database and any uploaded files persist across container restarts.
 
 ---
 
@@ -154,7 +158,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-The editable install (`pip install -e .`) makes the `agents` and `shared` packages importable so the Streamlit app and `langgraph dev` can find them.
+The editable install (`pip install -e .`) makes the `agents`, `shared`, `services`, and `api` packages importable so the Streamlit app, API server, and `langgraph dev` can find them.
 
 **4. Configure environment**
 
@@ -191,6 +195,9 @@ python scripts/generate_samples.py
 # Streamlit UI
 streamlit run src/ui/app.py
 
+# REST API (separate terminal)
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+
 # LangGraph Studio (separate terminal)
 langgraph dev
 ```
@@ -214,6 +221,69 @@ langgraph dev
 
 ---
 
+## API
+
+The REST API exposes all three agents as HTTP endpoints for programmatic access. Interactive documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) when the API service is running.
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Liveness check with DB connectivity status |
+| `POST` | `/reconciliation` | Upload files and run the reconciliation pipeline |
+| `GET` | `/reconciliation/runs/{run_id}` | Check run status and retrieve results |
+| `POST` | `/insights` | Run the insights pipeline |
+| `GET` | `/insights/latest` | Return cached insights without re-running |
+| `POST` | `/chat` | Send a message to the financial chat agent |
+
+### Examples
+
+**Run reconciliation on uploaded statements:**
+
+```bash
+curl -X POST http://localhost:8000/reconciliation \
+  -F "files=@data/statements/itau_2026_01.pdf" \
+  -F "files=@data/statements/brou_2026_01.xlsx" \
+  -F "auto_approve=true"
+```
+
+Returns a `run_id`, status, transaction counts, and flagged items. With `auto_approve=true` (default), both human-in-the-loop interrupts are skipped — suitable for automated workflows.
+
+**Generate spending insights:**
+
+```bash
+curl -X POST http://localhost:8000/insights \
+  -H "Content-Type: application/json" \
+  -d '{"date_from": "2026-01-01", "date_to": "2026-01-31"}'
+```
+
+Returns aggregations (spending by category, month-over-month deltas, recurring charges), habits, and suggestions. Omit the date range to analyze the full transaction history.
+
+**Read cached insights (no LLM cost):**
+
+```bash
+curl http://localhost:8000/insights/latest
+```
+
+**Ask a question about your finances:**
+
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What did I spend the most on last month?"}'
+```
+
+### Integration patterns
+
+The API is designed to be consumed by automation tools and AI agent frameworks:
+
+- **n8n / Zapier** — HTTP Request nodes calling the endpoints to build email-triggered reconciliation workflows or scheduled reporting
+- **OpenClaw** — Skills that wrap the API endpoints, enabling natural language financial queries through a personal AI assistant
+- **MCP servers** — Tool definitions backed by the same service layer (planned — see [ROADMAP.md](ROADMAP.md))
+- **Custom scripts** — Any HTTP client can trigger reconciliation, poll for results, and read insights
+
+---
+
 ## Project Structure
 
 ```
@@ -233,7 +303,7 @@ finance-intelligence-agent/
 │   │   │   ├── nodes.py            # load_context, compute_aggregations, generate_insights, persist_results
 │   │   │   ├── state.py            # InsightsState
 │   │   │   ├── configuration.py    # InsightsConfig
-│   │   │   └── tools.py            # @tool wrappers over DatabaseService query methods
+│   │   │   └── tools.py            # @tool wrappers over DatabaseRepository query methods
 │   │   │
 │   │   └── chat/                   # Chat agent
 │   │       ├── graph.py            # ReAct tool-calling loop
@@ -241,15 +311,28 @@ finance-intelligence-agent/
 │   │       ├── state.py            # ChatState
 │   │       └── configuration.py    # ChatConfig
 │   │
+│   ├── api/                        # FastAPI REST API (transport adapter)
+│   │   ├── main.py                 # App factory, lifespan, CORS, router wiring
+│   │   └── routes/
+│   │       ├── reconciliation.py   # POST /reconciliation, GET /reconciliation/runs/{run_id}
+│   │       ├── insights.py         # POST /insights, GET /insights/latest
+│   │       └── chat.py             # POST /chat
+│   │
+│   ├── services/                   # Orchestration layer — transport-agnostic agent invocation
+│   │   ├── schemas.py              # Pydantic response models (RunResult, InsightsResult, ChatResponse)
+│   │   ├── reconciliation.py       # run(), get_status()
+│   │   ├── insights.py             # run(), get_latest()
+│   │   └── chat.py                 # send_message()
+│   │
 │   ├── shared/                     # Shared infrastructure across all agents
 │   │   ├── db/
 │   │   │   ├── __init__.py         # SQLAlchemy engine, session factory, migrations, checkpointer
 │   │   │   ├── models.py           # ORM models (RunHistory, TransactionRecord, receipts, etc.)
 │   │   │   └── alembic/            # Alembic migration scripts
 │   │   ├── models.py               # Pydantic models (Transaction, RawDocument, Receipt, InsightsOutput)
-│   │   └── services/
-│   │       ├── database_service.py # All SQL — single source of truth for DB operations
-│   │       └── exchange_service.py # Historical exchange rate fetching
+│   │   └── repositories/
+│   │       ├── database_repository.py # All SQL — single source of truth for DB operations
+│   │       └── exchange_repository.py # Historical exchange rate fetching
 │   │
 │   └── ui/
 │       └── app.py                  # Streamlit UI (reconciliation, insights, settings, history tabs)
@@ -263,7 +346,7 @@ finance-intelligence-agent/
 │       ├── helpers.py              # Transaction factory shared by eval tests
 │       ├── test_categorize_eval.py # Categorization accuracy (threshold: 75%)
 │       └── test_duplicate_eval.py  # Duplicate precision/recall (recall ≥ 90%, precision ≥ 85%)
-├── data/                           # Generated sample data and SQLite database
+├── data/                           # Generated sample data and database
 ├── Dockerfile
 ├── docker-compose.yml
 ├── dockerignore
@@ -298,7 +381,7 @@ The system uses separate configuration for each agent:
 | `model_name` | `gpt-4o` | Larger model for analytical reasoning over aggregated spending data |
 | `temperature` | `0.0` | Deterministic outputs — financial analysis should be reproducible |
 
-**Database**: configured via `DATABASE_URL` environment variable. Supports `sqlite:///` (default: `data/agent.db`) and `postgresql://`. Schema migrations are handled automatically by Alembic on app startup.
+**Database**: configured via `DATABASE_URL` environment variable. Supports `sqlite:///` (default: `data/agent.db`) and `postgresql://`. PostgreSQL is the default in Docker Compose. Schema migrations are handled automatically by Alembic on app startup.
 
 ---
 
@@ -318,11 +401,17 @@ There's no meaningful state to hand off between them — the shared medium is th
 
 This separation also means insights never run at the end of reconciliation. Insights are pull, not push — tacking analysis onto every upload would slow the core flow and produce poor results on early runs with little history.
 
-### The `shared/` Layer and `DatabaseService` Boundary
+### Service Layer Over Direct Graph Invocation
 
-All SQL lives in `DatabaseService`. Nodes and tools never call `get_connection()` directly. Tools are thin `@tool` wrappers over service methods, split by usage scope (pipeline vs. chat-only). This pattern comes from Android's datasource abstraction and ensures that the DB schema is a single source of truth, not scattered across graph nodes.
+The Streamlit UI originally invoked graphs directly — compiling them, managing checkpointers, and parsing results inline. v1.1 extracted this into a `services/` layer that provides clean Python functions (`reconciliation.run()`, `insights.run()`, `chat.send_message()`) returning Pydantic models.
 
-When the insights agent was introduced, `DatabaseService`, `db.py`, and the `Transaction` model were extracted into a `shared/` package — the contract layer between all three agents. The restructure from `agent/` into `agents/reconciliation/`, `agents/insights/`, and `agents/chat/` followed naturally.
+Both the Streamlit UI and the FastAPI API are thin adapters over this layer. The service owns graph compilation, config defaults, error handling, and response shaping. The transports only handle their protocol-specific concerns (Streamlit session state, HTTP request/response). This means adding a new transport — an MCP server, an OpenClaw skill, a CLI tool — requires no changes to the orchestration logic.
+
+### The `shared/` Layer and `DatabaseRepository` Boundary
+
+All SQL lives in `DatabaseRepository`. Nodes and tools never call `get_connection()` directly. Tools are thin `@tool` wrappers over repository methods, split by usage scope (pipeline vs. chat-only). This pattern comes from Android's datasource abstraction and ensures that the DB schema is a single source of truth, not scattered across graph nodes.
+
+When the insights agent was introduced, `DatabaseRepository`, `db.py`, and the `Transaction` model were extracted into a `shared/` package — the contract layer between all three agents. The restructure from `agent/` into `agents/reconciliation/`, `agents/insights/`, and `agents/chat/` followed naturally.
 
 ### Model Selection by Task
 

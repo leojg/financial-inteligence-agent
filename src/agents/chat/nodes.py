@@ -10,10 +10,12 @@ from langchain_openai import ChatOpenAI
 
 from agents.chat.configuration import ChatConfig
 from agents.chat.state import ChatState
-from shared.services.database_service import DatabaseService
+from shared.repositories.database_repository import (
+    DatabaseRepository as DatabaseService,
+)
 
 
-def load_context(state: ChatState) -> dict:
+def load_context(state: ChatState) -> dict[str, Any]:
     """Load financial context from the latest full-range insights cache."""
     database_service = DatabaseService()
 
@@ -57,7 +59,7 @@ def load_context(state: ChatState) -> dict:
         "goals_prompt": goals_prompt,
     }
 
-def make_chat_node(config: ChatConfig, tools: list) -> Callable[[ChatState], dict[str, Any]]:
+def make_chat_node(config: ChatConfig, tools: list[Any]) -> Callable[[ChatState], dict[str, Any]]:
     """Return a chat node function bound to the given config and tools."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
     llm_with_tools = llm.bind_tools(tools)
@@ -99,7 +101,7 @@ def make_chat_node(config: ChatConfig, tools: list) -> Callable[[ChatState], dic
         """
 
         result = llm_with_tools.invoke(
-            [SystemMessage(content=prompt), *state["messages"]]  # type: ignore[list-item]
+            [SystemMessage(content=prompt), *state["messages"]]
         )
 
         return {

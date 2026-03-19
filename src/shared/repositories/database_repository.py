@@ -1,4 +1,4 @@
-"""Persistence service for all app tables via SQLAlchemy Core."""
+"""Persistence repository for all app tables via SQLAlchemy Core."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def _ordered(a: str, b: str) -> tuple[str, str]:
     return (a, b) if a <= b else (b, a)
 
 
-class DatabaseService:
+class DatabaseRepository:
     """Centralized persistence for the finance agent (cache, categories, duplicates, runs, transactions)."""
 
     def __init__(self) -> None:
@@ -118,7 +118,7 @@ class DatabaseService:
     @staticmethod
     def transaction_fingerprint(date: str, amount: float, currency: str, merchant: str) -> str:
         """Return a stable SHA-256 fingerprint for a transaction (identifies same real-world charge)."""
-        key = f"{date}|{amount}|{currency}|{DatabaseService.normalize_merchant(merchant)}"
+        key = f"{date}|{amount}|{currency}|{DatabaseRepository.normalize_merchant(merchant)}"
         return hashlib.sha256(key.encode()).hexdigest()
 
     def get_duplicate_pair(self, fp_a: str, fp_b: str) -> dict[str, Any] | None:
@@ -828,7 +828,7 @@ class DatabaseService:
                 """),
                 {"run_id": run_id},
             )
-            linked = result.rowcount  # type: ignore[attr-defined]
+            linked: int = result.rowcount  # type: ignore[attr-defined]
             session.commit()
         return linked
 

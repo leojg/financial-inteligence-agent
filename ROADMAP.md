@@ -146,6 +146,34 @@ A stable release suitable for personal use and public showcase. Focused on packa
 - Evaluation suite: accuracy metrics for categorization and duplicate detection against labeled synthetic data
 - End-to-end demo video
 
+---
+
+## v1.1 — Service Layer & API
+
+*Goal: expose the three agents as a programmable service so the system can be consumed by any transport — HTTP, MCP, OpenClaw skills, or custom integrations.*
+
+The Streamlit UI proved the agents work. This version extracts the invocation logic into a reusable service layer and wraps it in a FastAPI API, making the agent consumable as a product backend rather than just a local demo.
+
+**Scope:**
+- Rename `shared/services/` → `shared/repositories/` to reflect data access responsibility (`DatabaseService` → `DatabaseRepository`)
+- `src/services/` orchestration layer — clean Python interface to invoke all three agents, decoupled from any transport
+- `src/api/` FastAPI app with routes for all three agents:
+  - `POST /reconciliation` — file uploads, invoke reconciliation pipeline, return run summary
+  - `GET /reconciliation/runs/{run_id}` — check run status and results
+  - `POST /insights` — trigger insights pipeline, return aggregations + habits + suggestions
+  - `GET /insights/latest` — return cached insights without re-running
+  - `POST /chat` — send a message, get a response
+  - `GET /health` — liveness check with DB connectivity
+- `auto_approve` mode for reconciliation — skips human-in-the-loop interrupts for automated consumers
+- `api` service added to Docker Compose behind `--profile api`
+- PostgreSQL promoted to default (always-on in Docker Compose); all services depend on it
+- Pydantic request/response schemas in `services/schemas.py`
+
+**Does not deliver:**
+- Authentication / API keys (v2.0 — multi-tenant)
+- Streaming / SSE responses (backlog)
+- MCP server (separate milestone — consumes the same service layer)
+- Webhook callbacks on completion (consumers poll instead)
 
 ---
 
@@ -153,6 +181,7 @@ A stable release suitable for personal use and public showcase. Focused on packa
 
 Ideas that are out of scope for the current roadmap but worth tracking:
 
+- **MCP server** — Expose the service layer as an MCP tool server so Claude, OpenClaw, and other MCP-compatible agents can invoke reconciliation, insights, and chat directly. Thin adapter over `src/services/`, same pattern as the FastAPI routes.
 - **Chat message persistence** — Hybrid approach: store messages in a dedicated `chat_messages` table, load a sliding window (~20 messages) into state via `load_context`. Prevents checkpointer bloat from full message history serialization on every ReAct step. Enables searchable chat history and a conversation list sidebar in the UI.
 - **Chat message summarization** — Periodically condense older messages into a summary message to preserve long-range context without growing the token window. Complements the message windowing approach.
 - **Chat model routing** — Classifier-based routing between `gpt-4o-mini` (simple questions answerable from context or a single tool call) and `gpt-4o` (complex multi-step reasoning). Reduces cost for the majority of questions while preserving quality for hard ones.
