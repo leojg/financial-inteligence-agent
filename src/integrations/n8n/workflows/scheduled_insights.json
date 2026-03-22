@@ -1,0 +1,112 @@
+{
+  "name": "scheduled_insights",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b32ae636-a470-418d-9c0e-7fad0ce2c5cc",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.FINANCIAL_API_URL || 'http://api:8000' }}/insights",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "c96d1001-e66a-4948-b282-a5671000ccc0",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.N8N_TELEGRAM_CHAT_ID }}",
+        "text": "=Status: {{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "c31eb7bd-d630-47ef-93e7-d8ec0781d683",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst agg = data.aggregations || {};\nconst habits = data.habits || [];\nconst suggestions = data.suggestions || [];\n\nlet msg = `📊 *Financial Digest*\\n`;\nmsg += `${data.date_from} → ${data.date_to}\\n\\n`;\n\n// Top spending categories\nconst breakdown = agg.receipt_line_breakdown || [];\nif (breakdown.length) {\n  msg += `*Top Spending:*\\n`;\n  breakdown.slice(0, 5).forEach(item => {\n    msg += `  • ${item.description}: $${item.total.toFixed(0)}\\n`;\n  });\n  msg += `\\n`;\n}\n\n// Habits\nif (habits.length) {\n  msg += `*Habits:*\\n`;\n  habits.forEach(h => {\n    const icon = h.severity === 'warning' ? '⚠️' : 'ℹ️';\n    msg += `  ${icon} ${h.observation}\\n`;\n  });\n  msg += `\\n`;\n}\n\n// Suggestions\nif (suggestions.length) {\n  msg += `*Suggestions:*\\n`;\n  suggestions.forEach(s => {\n    msg += `  💡 *${s.title}*: ${s.body}\\n`;\n  });\n}\n\nreturn [{ json: { text: msg } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ff45dacd-9ea6-4031-8840-f91d06f21610",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -177,11 +177,58 @@ The Streamlit UI proved the agents work. This version extracts the invocation lo
 
 ---
 
+## v1.2 — n8n Integration ✅
+
+*Goal: connect the API to real-world triggers via n8n workflow automation, so the system runs without manual intervention.*
+
+The API made the agents programmable. This version connects them to Telegram via self-hosted n8n — scheduled spending digests and a conversational chat interface, all running locally in Docker Compose.
+
+**Delivered:**
+- n8n service in Docker Compose behind `--profile n8n` with auto-import of workflow templates on first boot
+- **Scheduled Insights Digest** workflow: Cron trigger → POST `/insights` → JavaScript formatting → Telegram message with spending breakdown, habits, and suggestions
+- **Chat via Telegram** workflow: Telegram bot trigger → POST `/chat` with conversation persistence (Telegram chat ID as `conversation_id`) → Telegram reply
+- Telegram credentials injected via environment variables (zero UI configuration)
+- ngrok tunnel service behind `--profile dev` for local Telegram webhook development
+- Integration documentation in `src/integrations/n8n/README.md`
+
+**Does not deliver:**
+- Email → Reconcile → Notify workflow (requires webhook callback endpoint — moved to backlog)
+- Webhook callback on `POST /reconciliation` (backlog)
+- n8n custom nodes (HTTP Request nodes are sufficient and more portable)
+
+---
+
+## v1.3 — MCP Server
+
+*Goal: expose the service layer as an MCP tool server so Claude, OpenClaw, and other MCP-compatible agents can invoke reconciliation, insights, and chat as native tools.*
+
+The FastAPI routes proved the service layer pattern: thin transport adapters over `src/services/`. This version adds a second adapter — an MCP server — following the same pattern. The key design challenge is file ingestion: MCP tools receive structured JSON inputs, not multipart uploads, so the service layer needs a bytes-based ingestion path alongside the existing file-path flow.
+
+**Scope:**
+- `src/mcp/` — MCP server adapter with SSE transport (Streamable HTTP), following the same thin-adapter pattern as `src/api/`
+- Service layer addition: `reconciliation.run()` accepts `files: list[tuple[str, bytes]]` (filename + content) as an alternative to `file_paths: list[str]`, writing bytes to a temp directory internally — one method, two input shapes
+- MCP tool definitions:
+  - `start_reconciliation` — accepts base64-encoded files + `auto_approve` flag, returns `run_id` and initial status
+  - `get_reconciliation_status` — accepts `run_id`, returns current `RunResult` (two-tool pattern for long-running pipeline)
+  - `run_insights` — accepts optional `date_from` / `date_to`, returns aggregations + habits + suggestions
+  - `get_latest_insights` — returns cached insights (no LLM cost)
+  - `chat` — accepts a message string + optional `conversation_id`, returns the agent's response
+- `mcp` service added to Docker Compose (`--profile mcp`)
+- MCP server config template for Claude Desktop / Claude Code (`claude_desktop_config.json`)
+- Documentation: tool catalog with input/output schemas, setup instructions for Claude Desktop and Claude Code
+
+**Does not deliver:**
+- Authentication / API keys (v2.0 — multi-tenant)
+- Streaming partial results during reconciliation (tool returns final result or status)
+- Resource endpoints (MCP resources for browsing transaction history — backlog)
+- Prompt templates (MCP prompts for common financial queries — backlog)
+
+---
+
 ## Backlog / Future Considerations
 
 Ideas that are out of scope for the current roadmap but worth tracking:
 
-- **MCP server** — Expose the service layer as an MCP tool server so Claude, OpenClaw, and other MCP-compatible agents can invoke reconciliation, insights, and chat directly. Thin adapter over `src/services/`, same pattern as the FastAPI routes.
 - **Chat message persistence** — Hybrid approach: store messages in a dedicated `chat_messages` table, load a sliding window (~20 messages) into state via `load_context`. Prevents checkpointer bloat from full message history serialization on every ReAct step. Enables searchable chat history and a conversation list sidebar in the UI.
 - **Chat message summarization** — Periodically condense older messages into a summary message to preserve long-range context without growing the token window. Complements the message windowing approach.
 - **Chat model routing** — Classifier-based routing between `gpt-4o-mini` (simple questions answerable from context or a single tool call) and `gpt-4o` (complex multi-step reasoning). Reduces cost for the majority of questions while preserving quality for hard ones.
@@ -192,3 +239,5 @@ Ideas that are out of scope for the current roadmap but worth tracking:
 - **Web deployment** — hosted version with user accounts and cloud storage
 - **Bank API integration** — replace manual statement imports with Plaid or open banking APIs
 - **Export** — CSV/PDF export of reconciliation reports and insights
+- **Webhook callback on POST /reconciliation** — optional `callback_url` parameter; API fires a POST with the `RunResult` payload on completion. Enables fire-and-forget workflows (e.g. email → reconcile → notify) without polling.
+- **Email → Reconcile → Notify workflow** — n8n workflow: Gmail/IMAP trigger → extract attachments → POST `/reconciliation` with callback → format result → Telegram. Depends on the webhook callback endpoint.

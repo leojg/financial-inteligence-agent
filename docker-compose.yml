@@ -69,5 +69,48 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── n8n — workflow automation ─────────────────────────────────────
+  # Start with: docker compose --profile n8n up
+  # http://localhost:5678
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    profiles:
+      - n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_TELEGRAM_CHAT_ID=${N8N_TELEGRAM_CHAT_ID:-}
+      - FINANCIAL_API_URL=${FINANCIAL_API_URL:-http://api:8000}
+      - CREDENTIALS_OVERWRITE_DATA={"telegramApi":{"accessToken":"${N8N_TELEGRAM_BOT_TOKEN}"}}
+      - CREDENTIALS_OVERWRITE_ENDPOINT=telegramApi
+    env_file:
+      - .env
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./src/integrations/n8n/workflows:/data/workflows:ro
+      - ./src/integrations/n8n/entrypoint.sh:/docker-entrypoint-init.d/import.sh:ro
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/import.sh"]
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── ngrok tunnel (dev only) ────────────────────────────────────────
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles:
+      - dev
+    command: http n8n:5678 --domain=unlandmarked-irmgard-semiradically.ngrok-free.dev
+    ports:
+      - "4040:4040"    # ngrok inspection UI
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+    depends_on:
+      - n8n
+
 volumes:
   pgdata:
+  n8n_data:

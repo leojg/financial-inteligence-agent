@@ -130,6 +130,23 @@ This adds the FastAPI service alongside the existing ones:
 
 Sample data is included in the repo and available immediately. The database and any uploaded files persist across container restarts.
 
+**4. (Optional) Start n8n workflow automation**
+```bash
+docker compose --profile api --profile n8n up
+```
+
+This adds n8n alongside the API. Workflows are auto-imported on first boot. Add your Telegram bot credentials to `.env`:
+```env
+N8N_TELEGRAM_BOT_TOKEN=...     # from @BotFather
+N8N_TELEGRAM_CHAT_ID=...       # your chat ID
+```
+
+| Service | URL | Purpose |
+|---|---|---|
+| n8n | [http://localhost:5678](http://localhost:5678) | Workflow automation — scheduled digests, email-triggered reconciliation, Telegram chat |
+
+Pre-built workflow templates are in `src/integrations/n8n/workflows/`. See the [n8n integration guide](src/integrations/n8n/README.md) for customization.
+
 ---
 
 ## Local Setup (without Docker)
@@ -277,7 +294,7 @@ curl -X POST http://localhost:8000/chat \
 
 The API is designed to be consumed by automation tools and AI agent frameworks:
 
-- **n8n / Zapier** — HTTP Request nodes calling the endpoints to build email-triggered reconciliation workflows or scheduled reporting
+- **n8n** — Self-hosted workflow automation via Docker Compose. Pre-built templates for scheduled Telegram digests, email-triggered reconciliation, and conversational chat. See `src/integrations/n8n/`.
 - **OpenClaw** — Skills that wrap the API endpoints, enabling natural language financial queries through a personal AI assistant
 - **MCP servers** — Tool definitions backed by the same service layer (planned — see [ROADMAP.md](ROADMAP.md))
 - **Custom scripts** — Any HTTP client can trigger reconciliation, poll for results, and read insights
@@ -323,6 +340,12 @@ finance-intelligence-agent/
 │   │   ├── reconciliation.py       # run(), get_status()
 │   │   ├── insights.py             # run(), get_latest()
 │   │   └── chat.py                 # send_message()
+│   │
+│   ├── integrations/
+│   │   └── n8n/
+│   │       ├── workflows/              # Exportable n8n workflow JSON templates
+│   │       ├── entrypoint.sh           # Auto-imports workflows on container first boot
+│   │       └── README.md               # Setup guide and customization
 │   │
 │   ├── shared/                     # Shared infrastructure across all agents
 │   │   ├── db/
