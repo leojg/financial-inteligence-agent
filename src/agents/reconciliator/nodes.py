@@ -35,6 +35,7 @@ def _llm_content_str(content: Any) -> str:
         return content
     return json.dumps(content) if content is not None else "[]"
 
+
 def prepare_ingest(state: ReconciliationState) -> dict[str, Any]:
     """Expand source_paths (folders + files) into a deduplicated list of file paths."""
     source_paths = state.get("source_paths") or []
@@ -57,9 +58,7 @@ def prepare_ingest(state: ReconciliationState) -> dict[str, Any]:
             if key not in seen:
                 seen.add(key)
                 source_files.append(key)
-    return {
-        "source_files": source_files
-    }
+    return {"source_files": source_files}
 
 
 def ingest(state: ReconciliationState) -> dict[str, Any]:
@@ -70,21 +69,25 @@ def ingest(state: ReconciliationState) -> dict[str, Any]:
     raw_documents = [
         RawDocument(
             source_file=doc.metadata["source"],
-            file_type="xlsx" if doc.metadata["source"].endswith((".xlsx", ".xls")) else "pdf",
+            file_type="xlsx"
+            if doc.metadata["source"].endswith((".xlsx", ".xls"))
+            else "pdf",
             content=doc.page_content,
-            confidence=1.0
+            confidence=1.0,
         )
         for doc in documents
     ]
 
-    return {
-        "raw_documents": raw_documents,
-        "receipts": []
-    }
+    return {"raw_documents": raw_documents, "receipts": []}
 
-def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+
+def make_ingest_images_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a ingest_images node that loads images from source_folder and returns raw_images."""
-    llm = ChatAnthropic(model=config.vision_model_name, max_tokens=config.vision_max_tokens)  # type: ignore[call-arg]
+    llm = ChatAnthropic(
+        model=config.vision_model_name, max_tokens=config.vision_max_tokens
+    )  # type: ignore[call-arg]
 
     def ingest_images(state: ReconciliationState) -> dict[str, Any]:
         source_files = state["source_files"]
@@ -102,10 +105,16 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
         msg_content: list[dict[str, Any]] = []
 
         for path, data, media_type in images:
-            msg_content.append({
-                "type": "image",
-                "source": {"type": "base64", "media_type": media_type, "data": data},
-            })
+            msg_content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": data,
+                    },
+                }
+            )
 
         msg_content.append(
             {
@@ -133,7 +142,7 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
                 - Include taxes, tips, and service charges as individual line items if shown
                 - If multiple receipts are visible in the image, return one result object per receipt
                 - Do not include any other text, no markdown blocks
-                """
+                """,
             }
         )
 
@@ -164,7 +173,9 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
         except json.JSONDecodeError as e:
             logger.warning(
                 "Vision response was not valid JSON (error at pos %s): %s ... [tail] %s",
-                e.pos, raw_text[:200], text[-300:] if len(text) > 300 else text,
+                e.pos,
+                raw_text[:200],
+                text[-300:] if len(text) > 300 else text,
             )
             results = []
 
@@ -215,15 +226,14 @@ def make_ingest_images_node(config: ReconciliationConfig) -> Callable[[Reconcili
                 )
             )
 
-        return {
-            "raw_documents": raw_documents,
-            "receipts": receipts
-        }
+        return {"raw_documents": raw_documents, "receipts": receipts}
 
     return ingest_images
 
 
-def make_normalize_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+def make_normalize_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a normalize node that extracts transactions from raw_documents (with cache)."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
 
@@ -280,18 +290,20 @@ def make_normalize_node(config: ReconciliationConfig) -> Callable[[Reconciliatio
                 database_service.save_normalized_document(
                     content_hash,
                     doc.source_file,
-                    json.dumps([x.model_dump() for x in transactions[-len(raw_json):]]),
+                    json.dumps(
+                        [x.model_dump() for x in transactions[-len(raw_json) :]]
+                    ),
                 )
             except json.JSONDecodeError as e:
-                logger.warning("Failed to parse LLM response for %s: %s", doc.source_file, e)
+                logger.warning(
+                    "Failed to parse LLM response for %s: %s", doc.source_file, e
+                )
                 continue
             except Exception as e:
                 logger.warning("Failed to normalize %s: %s", doc.source_file, e)
                 continue
 
-        return {
-            "transactions": transactions
-        }
+        return {"transactions": transactions}
 
     return normalize
 
@@ -302,13 +314,16 @@ def make_review_low_confidence_transactions_node(
     """Return a node that applies user decisions for low-confidence transactions (runs after interrupt)."""
     threshold = config.image_low_confidence_threshold
 
-    def review_low_confidence_transactions(state: ReconciliationState) -> dict[str, Any]:
+    def review_low_confidence_transactions(
+        state: ReconciliationState,
+    ) -> dict[str, Any]:
         transactions = [
             Transaction(**t) if isinstance(t, dict) else t
             for t in state["transactions"]
         ]
         low_conf = [
-            t for t in transactions
+            t
+            for t in transactions
             if t.confidence is not None and t.confidence < threshold
         ]
         if not low_conf:
@@ -319,7 +334,8 @@ def make_review_low_confidence_transactions_node(
             return {}
 
         decisions_by_id = {
-            d["id"]: d for d in decisions
+            d["id"]: d
+            for d in decisions
             if isinstance(d, dict) and d.get("id") is not None
         }
         low_conf_ids = {t.id for t in low_conf}
@@ -350,7 +366,9 @@ def make_review_low_confidence_transactions_node(
             if doc.source_file not in source_files_to_update:
                 continue
             content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
-            transactions_for_doc = [t for t in new_txns if t.source_file == doc.source_file]
+            transactions_for_doc = [
+                t for t in new_txns if t.source_file == doc.source_file
+            ]
             database_service.save_normalized_document(
                 content_hash,
                 doc.source_file,
@@ -361,10 +379,13 @@ def make_review_low_confidence_transactions_node(
             "transactions": new_txns,
             "low_confidence_decisions": None,
         }
+
     return review_low_confidence_transactions
 
 
-def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+def make_convert_currency_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a convert_currency node that converts amounts to base_currency."""
     exchange_service: ExchangeService = ExchangeService()
 
@@ -378,16 +399,14 @@ def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[Reconc
                 t = Transaction(**t)
 
             if t.currency == config.base_currency:
-                t = t.model_copy(
-                    update={
-                        "amount_base": t.amount_original
-                    }
-                )
+                t = t.model_copy(update={"amount_base": t.amount_original})
             else:
                 cache_key = f"{t.date}-{t.currency}"
                 if cache_key not in exchange_rates:
                     time.sleep(0.5)  # debounce — 2 requests/second max
-                    rate = exchange_service.get_rate(t.date, t.currency, config.base_currency)
+                    rate = exchange_service.get_rate(
+                        t.date, t.currency, config.base_currency
+                    )
                     if rate:
                         exchange_rates[cache_key] = rate
                     else:
@@ -405,15 +424,14 @@ def make_convert_currency_node(config: ReconciliationConfig) -> Callable[[Reconc
 
             transactions.append(t)
 
-        return {
-            "transactions": transactions,
-            "exchange_rates": exchange_rates
-        }
+        return {"transactions": transactions, "exchange_rates": exchange_rates}
 
     return convert_currency
 
 
-def make_categorize_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+def make_categorize_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a categorize node that checks merchant_categories cache before calling the LLM."""
     llm = ChatOpenAI(
         model=config.model_name,
@@ -427,7 +445,8 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
 
     def categorize(state: ReconciliationState) -> dict[str, Any]:
         transactions = [
-            Transaction(**t) if isinstance(t, dict) else t for t in state["transactions"]
+            Transaction(**t) if isinstance(t, dict) else t
+            for t in state["transactions"]
         ]
         database_service = DatabaseService()
         updated: list[Transaction] = []
@@ -446,15 +465,18 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
 
             logger.info(
                 "categorize: %d cache hits, %d LLM calls needed in this batch",
-                len(cache_hits), len(llm_needed),
+                len(cache_hits),
+                len(llm_needed),
             )
 
             llm_results: dict[str, str | None] = {}
             if llm_needed:
-                transaction_list = "\n".join([
-                    f"{t.id} | {t.merchant} | {t.amount_original} {t.currency}"
-                    for t in llm_needed
-                ])
+                transaction_list = "\n".join(
+                    [
+                        f"{t.id} | {t.merchant} | {t.amount_original} {t.currency}"
+                        for t in llm_needed
+                    ]
+                )
 
                 prompt = f"""
                         Categorize each transaction using a standard personal finance category.
@@ -491,14 +513,20 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
                     logger.warning("Failed to parse categorization response: %s", e)
                     # Mark all LLM-needed as needs_review
                     for t in llm_needed:
-                        updated.append(t.model_copy(update={
-                            "needs_review": True,
-                            "review_reason": "Categorization batch failed",
-                        }))
+                        updated.append(
+                            t.model_copy(
+                                update={
+                                    "needs_review": True,
+                                    "review_reason": "Categorization batch failed",
+                                }
+                            )
+                        )
                     # Still apply cache hits for the rest of the batch
                     for t in batch:
                         if t.id in cache_hits:
-                            updated.append(t.model_copy(update={"category": cache_hits[t.id]}))
+                            updated.append(
+                                t.model_copy(update={"category": cache_hits[t.id]})
+                            )
                     continue
 
             for t in batch:
@@ -508,10 +536,14 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
 
                 category = llm_results.get(t.id)
                 if category is None or category == "null":
-                    updated.append(t.model_copy(update={
-                        "needs_review": True,
-                        "review_reason": "Could not confidently categorize transaction",
-                    }))
+                    updated.append(
+                        t.model_copy(
+                            update={
+                                "needs_review": True,
+                                "review_reason": "Could not confidently categorize transaction",
+                            }
+                        )
+                    )
                 else:
                     updated.append(t.model_copy(update={"category": category}))
 
@@ -520,7 +552,9 @@ def make_categorize_node(config: ReconciliationConfig) -> Callable[[Reconciliati
     return categorize
 
 
-def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+def make_detect_duplicates_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a detect_duplicates node; checks duplicate_pairs cache before LLM for fuzzy matches."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
 
@@ -529,7 +563,9 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
         d_b = datetime.fromisoformat(date_b)
         return abs((d_a - d_b).days) <= days
 
-    def _amounts_fuzzy_match(amount_a: float, amount_b: float, tolerance: float = 0.02) -> bool:
+    def _amounts_fuzzy_match(
+        amount_a: float, amount_b: float, tolerance: float = 0.02
+    ) -> bool:
         if amount_a == 0:
             return False
         return abs(amount_a - amount_b) / abs(amount_a) <= tolerance
@@ -573,7 +609,9 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
                 return False, False, reason
 
         except Exception as e:
-            logger.warning("LLM duplicate check failed for %s vs %s: %s", t_a.id, t_b.id, e)
+            logger.warning(
+                "LLM duplicate check failed for %s vs %s: %s", t_a.id, t_b.id, e
+            )
             return False, True, "LLM duplicate check failed"
 
     def detect_duplicates(state: ReconciliationState) -> dict[str, Any]:
@@ -596,7 +634,7 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
                 t_a.date, t_a.amount_original, t_a.currency, t_a.merchant
             )
 
-            for t_b in transactions[i + 1:]:
+            for t_b in transactions[i + 1 :]:
                 if t_a.currency != t_b.currency:
                     continue
                 if t_b.id in matched_ids:
@@ -622,7 +660,9 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
                         database_service, t_a, t_b, fp_a, fp_b
                     )
                     if is_duplicate:
-                        updated[t_b.id] = t_b.model_copy(update={"duplicate_of": t_a.id})
+                        updated[t_b.id] = t_b.model_copy(
+                            update={"duplicate_of": t_a.id}
+                        )
                         matched_ids.update([t_a.id, t_b.id])
                         duplicates.extend([updated[t_a.id], updated[t_b.id]])
                     elif needs_review:
@@ -638,7 +678,9 @@ def make_detect_duplicates_node(config: ReconciliationConfig) -> Callable[[Recon
     return detect_duplicates
 
 
-def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[ReconciliationState], dict[str, Any]]:
+def make_flag_suspicious_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a flag_suspicious node that marks suspicious transactions."""
     llm = ChatOpenAI(
         model=config.model_name,
@@ -658,10 +700,12 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
         suspicious_map: dict[str, str] = {}
 
         for batch in _chunk(transactions, 50):
-            transaction_list = "\n".join([
-                f"{t.id} | {t.date} | {t.merchant} | {t.amount_original} {t.currency} | {t.account} | {t.category}"
-                for t in batch
-            ])
+            transaction_list = "\n".join(
+                [
+                    f"{t.id} | {t.date} | {t.merchant} | {t.amount_original} {t.currency} | {t.account} | {t.category}"
+                    for t in batch
+                ]
+            )
 
             prompt = f"""
             Analyze the following transactions and identify any suspicious or unusual activity.
@@ -691,16 +735,25 @@ def make_flag_suspicious_node(config: ReconciliationConfig) -> Callable[[Reconci
             try:
                 response = llm.invoke(prompt)
                 raw_json = json.loads(_llm_content_str(response.content))
-                suspicious_map.update({item["id"]: item.get("reason") or "" for item in raw_json})
+                suspicious_map.update(
+                    {item["id"]: item.get("reason") or "" for item in raw_json}
+                )
             except json.JSONDecodeError as e:
-                logger.warning("Failed to parse suspicious transactions response: %s", e)
+                logger.warning(
+                    "Failed to parse suspicious transactions response: %s", e
+                )
 
         updated: list[Transaction] = []
         suspicious: list[Transaction] = []
 
         for t in transactions:
             if t.id in suspicious_map:
-                t = t.model_copy(update={"suspicious": True, "suspicious_reason": suspicious_map[t.id]})
+                t = t.model_copy(
+                    update={
+                        "suspicious": True,
+                        "suspicious_reason": suspicious_map[t.id],
+                    }
+                )
                 suspicious.append(t)
             updated.append(t)
 
@@ -714,11 +767,12 @@ def human_review(state: ReconciliationState) -> dict[str, Any]:
     return {}
 
 
-def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[str, Any]:
+def generate_report(
+    state: ReconciliationState, config: RunnableConfig
+) -> dict[str, Any]:
     """Build a text report from transactions, duplicates, and suspicious lists."""
     transactions = [
-        Transaction(**t) if isinstance(t, dict) else t
-        for t in state["transactions"]
+        Transaction(**t) if isinstance(t, dict) else t for t in state["transactions"]
     ]
 
     total = len(transactions)
@@ -734,7 +788,7 @@ def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[
         amount = abs(t.amount_base) if t.amount_base is not None else 0.0
         by_category[cat] = {
             "count": prev["count"] + 1,
-            "amount": round(prev["amount"] + amount, 2)
+            "amount": round(prev["amount"] + amount, 2),
         }
 
     report = f"""
@@ -793,35 +847,39 @@ def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[
             receipt_id = str(uuid.uuid4())
             merchant_norm = database_service.normalize_merchant(receipt.merchant)
 
-            receipt_rows.append({
-                "id": receipt_id,
-                "run_id": run_id,
-                "transaction_id": None,
-                "source_file": receipt.source_file,
-                "merchant": receipt.merchant,
-                "merchant_normalized": merchant_norm,
-                "date": receipt.date,
-                "currency": receipt.currency,
-                "subtotal": receipt.subtotal,
-                "tax_amount": receipt.tax_amount,
-                "tax_rate": receipt.tax_rate,
-                "total": receipt.total,
-                "receipt_number": receipt.receipt_number,
-                "confidence": receipt.confidence,
-                "raw_content": receipt.raw_content,
-            })
+            receipt_rows.append(
+                {
+                    "id": receipt_id,
+                    "run_id": run_id,
+                    "transaction_id": None,
+                    "source_file": receipt.source_file,
+                    "merchant": receipt.merchant,
+                    "merchant_normalized": merchant_norm,
+                    "date": receipt.date,
+                    "currency": receipt.currency,
+                    "subtotal": receipt.subtotal,
+                    "tax_amount": receipt.tax_amount,
+                    "tax_rate": receipt.tax_rate,
+                    "total": receipt.total,
+                    "receipt_number": receipt.receipt_number,
+                    "confidence": receipt.confidence,
+                    "raw_content": receipt.raw_content,
+                }
+            )
 
             for ln, line in enumerate(receipt.lines, start=1):
-                line_rows.append({
-                    "id": str(uuid.uuid4()),
-                    "receipt_id": receipt_id,
-                    "line_number": ln,
-                    "description": line.description,
-                    "quantity": line.quantity,
-                    "unit_price": line.unit_price,
-                    "amount": line.amount,
-                    "category": None,
-                })
+                line_rows.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "receipt_id": receipt_id,
+                        "line_number": ln,
+                        "description": line.description,
+                        "quantity": line.quantity,
+                        "unit_price": line.unit_price,
+                        "amount": line.amount,
+                        "category": None,
+                    }
+                )
 
         database_service.upsert_receipts(receipt_rows)
         database_service.upsert_receipt_lines(line_rows)
@@ -837,8 +895,7 @@ def generate_report(state: ReconciliationState, config: RunnableConfig) -> dict[
 
     return {"report": report}
 
+
 def passthrough(state: ReconciliationState) -> dict[str, Any]:
     """No state change; used for graph structure."""
-    return {
-        "receipts": []
-    }
+    return {"receipts": []}

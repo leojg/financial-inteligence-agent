@@ -31,9 +31,13 @@ def load_context(state: ChatState) -> dict[str, Any]:
 
     goals = database_service.get_active_goals()
     goals_prompt = (
-        "The user has defined the following financial goals.\n"
-        + "\n".join(f"- {goal['content']}" for goal in goals)
-    ) if goals else None
+        (
+            "The user has defined the following financial goals.\n"
+            + "\n".join(f"- {goal['content']}" for goal in goals)
+        )
+        if goals
+        else None
+    )
 
     # Trimming out larger aggregations to keep token size smaller
     aggregations = insights_cache["aggregations"]
@@ -59,7 +63,10 @@ def load_context(state: ChatState) -> dict[str, Any]:
         "goals_prompt": goals_prompt,
     }
 
-def make_chat_node(config: ChatConfig, tools: list[Any]) -> Callable[[ChatState], dict[str, Any]]:
+
+def make_chat_node(
+    config: ChatConfig, tools: list[Any]
+) -> Callable[[ChatState], dict[str, Any]]:
     """Return a chat node function bound to the given config and tools."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
     llm_with_tools = llm.bind_tools(tools)

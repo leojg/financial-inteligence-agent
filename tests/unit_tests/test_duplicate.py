@@ -108,9 +108,8 @@ def state_no_duplicates():
     ]
     return _base_state(transactions)
 
-def test_detect_duplicates_exact_match_pairs_without_llm(
-    config, state_with_duplicates
-):
+
+def test_detect_duplicates_exact_match_pairs_without_llm(config, state_with_duplicates):
     """tx1 and tx2 have same date and amount; they are detected as duplicates via exact match (no LLM call)."""
     detect_duplicates = make_detect_duplicates_node(config)
     result = detect_duplicates(state_with_duplicates)

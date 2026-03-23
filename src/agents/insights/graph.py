@@ -20,6 +20,7 @@ def _should_recompute(state: InsightsState) -> str:
     """Return the next node to execute based on the cache validity."""
     return "compute_aggregations" if not state["cache_valid"] else END
 
+
 def make_graph(
     config: InsightsConfig = DEFAULT_CONFIG,
     checkpointer: Any = None,
@@ -30,8 +31,7 @@ def make_graph(
     graph.add_node("load_context", load_context)
     graph.add_node("compute_aggregations", compute_aggregations)
     graph.add_node("generate_insights", make_generate_insights_node(config))  # type: ignore[arg-type]
-    graph.add_node("persist_results", persist_results)  
-
+    graph.add_node("persist_results", persist_results)
 
     graph.add_edge(START, "load_context")
     graph.add_conditional_edges("load_context", _should_recompute)

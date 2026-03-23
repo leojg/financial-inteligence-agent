@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models — schema source of truth for Alembic and app queries."""
+
 from __future__ import annotations
 
 from sqlalchemy import (
@@ -15,6 +16,7 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 
 class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
+
     pass
 
 
@@ -145,7 +147,9 @@ class InsightsCache(Base):
     created_at = Column(String, nullable=False)
 
     __table_args__ = (
-        Index("uq_insights_cache", "date_from", "date_to", "accounts_hash", unique=True),
+        Index(
+            "uq_insights_cache", "date_from", "date_to", "accounts_hash", unique=True
+        ),
     )
 
 
@@ -196,6 +200,4 @@ class ReceiptLineRecord(Base):
 
     receipt = relationship("ReceiptRecord", back_populates="lines")
 
-    __table_args__ = (
-        Index("idx_receipt_lines_receipt_id", "receipt_id"),
-    )
+    __table_args__ = (Index("idx_receipt_lines_receipt_id", "receipt_id"),)

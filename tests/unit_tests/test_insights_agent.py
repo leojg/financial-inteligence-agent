@@ -195,7 +195,9 @@ class TestComputeAggregations:
 
     def _make_db(self) -> MagicMock:
         db = MagicMock()
-        db.get_spending_by_category.return_value = [{"category": "Food", "total": 200.0}]
+        db.get_spending_by_category.return_value = [
+            {"category": "Food", "total": 200.0}
+        ]
         db.get_monthly_spend.return_value = [{"month": "2026-01", "total": 500.0}]
         db.get_merchant_monthly_spend.return_value = []
         db.get_transfer_fees_summary.return_value = []
@@ -233,7 +235,9 @@ class TestComputeAggregations:
 class TestGenerateInsights:
     """make_generate_insights_node passes aggregations to the LLM and returns habits/suggestions."""
 
-    def _run(self, llm_output: InsightsOutput, **state_overrides: Any) -> dict[str, Any]:
+    def _run(
+        self, llm_output: InsightsOutput, **state_overrides: Any
+    ) -> dict[str, Any]:
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value = mock_llm
         mock_llm.invoke.return_value = llm_output
@@ -241,7 +245,9 @@ class TestGenerateInsights:
         state = _base_state(
             date_from="2026-01-01",
             date_to="2026-01-31",
-            aggregations={"spending_by_category": [{"category": "Food", "total": 200.0}]},
+            aggregations={
+                "spending_by_category": [{"category": "Food", "total": 200.0}]
+            },
             goals_prompt=None,
             **state_overrides,
         )
@@ -252,9 +258,16 @@ class TestGenerateInsights:
 
     def _make_output(self) -> InsightsOutput:
         return InsightsOutput(
-            habits=[Habit(category="Food", observation="High spend", severity="warning")],
+            habits=[
+                Habit(category="Food", observation="High spend", severity="warning")
+            ],
             suggestions=[
-                Suggestion(type="spending", title="Cook at home", body="Reduce dining out", severity="info")
+                Suggestion(
+                    type="spending",
+                    title="Cook at home",
+                    body="Reduce dining out",
+                    severity="info",
+                )
             ],
         )
 
@@ -391,7 +404,11 @@ class TestGetMonthOverMonthDeltas:
 
         with patch("agents.insights.tools.DatabaseService", return_value=db):
             result = get_month_over_month_deltas.invoke(
-                {"date_from": "2026-01-01", "date_to": "2026-03-31", "lookback_months": 2}
+                {
+                    "date_from": "2026-01-01",
+                    "date_to": "2026-03-31",
+                    "lookback_months": 2,
+                }
             )
 
         # Month 3 baseline = avg of months 1 and 2 = (300+400)/2 = 350
@@ -473,9 +490,15 @@ class TestGraphCacheHitPath:
 
     def test_cache_hit_skips_llm(self) -> None:
         cached = {
-            "aggregations": {"spending_by_category": [{"category": "Food", "total": 200.0}]},
-            "habits": [{"category": "Food", "observation": "High", "severity": "warning"}],
-            "suggestions": [{"title": "Budget", "body": "Set limits", "severity": "info"}],
+            "aggregations": {
+                "spending_by_category": [{"category": "Food", "total": 200.0}]
+            },
+            "habits": [
+                {"category": "Food", "observation": "High", "severity": "warning"}
+            ],
+            "suggestions": [
+                {"title": "Budget", "body": "Set limits", "severity": "info"}
+            ],
             "created_at": "2026-01-20T10:00:00",
         }
         db = _mock_db(last_run_date="2026-01-15T08:00:00", insights_cache=cached)

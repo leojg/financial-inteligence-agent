@@ -40,10 +40,14 @@ def load_context(state: InsightsState) -> dict[str, Any]:
     goals = database_service.get_active_goals()
 
     goals_prompt = (
-        "The user has defined the following financial goals.\n"
-        "Take them into consideration when making observations or flagging habits:\n"
-        + "\n".join(f"- {goal['content']}" for goal in goals)
-    ) if goals else None
+        (
+            "The user has defined the following financial goals.\n"
+            "Take them into consideration when making observations or flagging habits:\n"
+            + "\n".join(f"- {goal['content']}" for goal in goals)
+        )
+        if goals
+        else None
+    )
 
     last_run = database_service.get_latest_reconciliation_run_date()
     last_insights = database_service.get_insights_cache(date_from, date_to, accounts)
@@ -61,10 +65,17 @@ def load_context(state: InsightsState) -> dict[str, Any]:
         "date_to": date_to,
         "goals_prompt": goals_prompt,
         "cache_valid": cache_valid,
-        "aggregations": last_insights["aggregations"] if (cache_valid and last_insights is not None) else None,
-        "habits": last_insights["habits"] if (cache_valid and last_insights is not None) else None,
-        "suggestions": last_insights["suggestions"] if (cache_valid and last_insights is not None) else None,
+        "aggregations": last_insights["aggregations"]
+        if (cache_valid and last_insights is not None)
+        else None,
+        "habits": last_insights["habits"]
+        if (cache_valid and last_insights is not None)
+        else None,
+        "suggestions": last_insights["suggestions"]
+        if (cache_valid and last_insights is not None)
+        else None,
     }
+
 
 def compute_aggregations(state: InsightsState) -> dict[str, Any]:
     """Compute aggregated spending data from the transactions table."""
@@ -118,13 +129,20 @@ def compute_aggregations(state: InsightsState) -> dict[str, Any]:
         },
     }
 
-def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsState], dict[str, Any]]:
+
+def make_generate_insights_node(
+    config: InsightsConfig,
+) -> Callable[[InsightsState], dict[str, Any]]:
     """Return a node that generates insights from the aggregated data."""
-    llm = ChatOpenAI(model=config.model_name, temperature=config.temperature).with_structured_output(InsightsOutput)
+    llm = ChatOpenAI(
+        model=config.model_name, temperature=config.temperature
+    ).with_structured_output(InsightsOutput)
 
     def generate_insights(state: InsightsState) -> dict[str, Any]:
         """Generate insights from the aggregated data."""
-        goals_section = f"\n{state['goals_prompt']}\n" if state.get("goals_prompt") else ""
+        goals_section = (
+            f"\n{state['goals_prompt']}\n" if state.get("goals_prompt") else ""
+        )
 
         prompt = f"""You are a personal finance analyst.
             Analyze the spending data below and return observations about the user's financial habits
@@ -149,6 +167,7 @@ def make_generate_insights_node(config: InsightsConfig) -> Callable[[InsightsSta
         }
 
     return generate_insights
+
 
 def persist_results(state: InsightsState) -> dict[str, Any]:
     """Persist aggregations, habits and suggestions to the insights cache."""

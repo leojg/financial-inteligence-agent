@@ -90,7 +90,11 @@ def test_normalize_cache_hit_returns_cached_transactions_no_llm(
             "INSERT INTO normalized_document_cache (source_file, content_hash, transactions_json)"
             " VALUES (:sf, :ch, :tj)"
         ),
-        {"sf": raw_doc_single.source_file, "ch": content_hash, "tj": json.dumps(cached_txs)},
+        {
+            "sf": raw_doc_single.source_file,
+            "ch": content_hash,
+            "tj": json.dumps(cached_txs),
+        },
     )
     in_memory_session.commit()
 
@@ -190,7 +194,13 @@ def test_normalize_accepts_dict_raw_documents(config, in_memory_session) -> None
     in_memory_session.commit()
 
     state = _base_state(
-        [{"source_file": "data/other.xlsx", "file_type": "xlsx", "content": raw_content}]
+        [
+            {
+                "source_file": "data/other.xlsx",
+                "file_type": "xlsx",
+                "content": raw_content,
+            }
+        ]
     )
     normalize = make_normalize_node(config)
     result = normalize(state)

@@ -6,7 +6,7 @@ An AI agent system for personal finance intelligence built on LangGraph. It inge
 
 The system is composed of three independent LangGraph graphs — **Reconciliation**, **Insights**, and **Chat** — connected through a shared database layer. Each graph has a distinct data source and invocation lifecycle, but they all operate on the same persistent transaction history.
 
-All three agents are accessible through a **Streamlit UI** for interactive use and a **FastAPI REST API** for programmatic access by external consumers (automation tools, MCP servers, OpenClaw skills, custom integrations).
+All three agents are accessible through a **Streamlit UI** for interactive use, a **FastAPI REST API**, and an **MCP server** for programmatic access by external consumers (automation tools, OpenClaw skills, custom integrations).
 
 Built to demonstrate production-grade LLM orchestration patterns applied to real financial data problems.
 
@@ -18,7 +18,7 @@ Built to demonstrate production-grade LLM orchestration patterns applied to real
 
 The system is split into three independent LangGraph graphs registered in `langgraph.json`, all sharing the same PostgreSQL database through a common `DatabaseRepository` layer.
 
-A **service layer** (`src/services/`) provides transport-agnostic orchestration — clean Python functions that compile graphs, invoke them, and return structured results. Both the Streamlit UI and the FastAPI API are thin adapters over this layer, and future transports (MCP server, OpenClaw skills) will follow the same pattern.
+A **service layer** (`src/services/`) provides transport-agnostic orchestration — clean Python functions that compile graphs, invoke them, and return structured results. Both the Streamlit UI and the FastAPI API are thin adapters over this layer, and future transports (such as OpenClaw skills) will follow the same pattern.
 
 ### Reconciliation Agent
 
@@ -292,12 +292,56 @@ curl -X POST http://localhost:8000/chat \
 
 ### Integration patterns
 
-The API is designed to be consumed by automation tools and AI agent frameworks:
+The API and MCP server are designed to be consumed by automation tools and AI agent frameworks:
 
 - **n8n** — Self-hosted workflow automation via Docker Compose. Pre-built templates for scheduled Telegram digests, email-triggered reconciliation, and conversational chat. See `src/integrations/n8n/`.
 - **OpenClaw** — Skills that wrap the API endpoints, enabling natural language financial queries through a personal AI assistant
-- **MCP servers** — Tool definitions backed by the same service layer (planned — see [ROADMAP.md](ROADMAP.md))
 - **Custom scripts** — Any HTTP client can trigger reconciliation, poll for results, and read insights
+
+#### MCP (Model Context Protocol)
+
+The [MCP](https://modelcontextprotocol.io) server (`src/mcp/server.py`) exposes the same **service layer** as the REST API — tools map to `reconciliation.run()`, `insights.run()`, `chat.send_message()`, etc. Use it from **Claude Desktop**, **Claude Code**, **Cursor**, or any MCP client that supports Streamable HTTP.
+
+**Start the server**
+
+```bash
+# With PostgreSQL (same DB as the app)
+docker compose --profile mcp up
+```
+
+The server listens on **port 8811**. Clients connect to the Streamable HTTP endpoint at `http://localhost:8811/mcp`.
+
+**Local development** (venv activated, `DATABASE_URL` set):
+
+```bash
+python src/mcp/server.py
+```
+
+**Tools**
+
+| Tool | Purpose |
+|---|---|
+| `start_reconciliation` | Upload statements as `{ "filename": "...", "content_base64": "..." }[]`; returns `run_id` and status |
+| `get_reconciliation_status` | Poll by `run_id` and `thread_id` (both from `start_reconciliation`) for completion, counts, and report |
+| `run_insights` | Optional `date_from` / `date_to`; returns aggregations, habits, suggestions |
+| `get_latest_insights` | Cached insights (no LLM cost); returns `error` if no cache exists |
+| `chat` | `message` and optional `conversation_id` for the ReAct financial assistant |
+
+Reconciliation is long-running: call `start_reconciliation`, then `get_reconciliation_status` until status is complete (same pattern as `POST /reconciliation` + `GET /reconciliation/runs/{run_id}`).
+
+**Claude Desktop** (macOS config path: `~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "finance-intelligence": {
+      "url": "http://localhost:8811/mcp"
+    }
+  }
+}
+```
+
+Adjust the URL if you use a tunnel or run the server on another host. For more detail, see [ROADMAP.md](ROADMAP.md) and the MCP specification.
 
 ---
 
@@ -334,6 +378,9 @@ finance-intelligence-agent/
 │   │       ├── reconciliation.py   # POST /reconciliation, GET /reconciliation/runs/{run_id}
 │   │       ├── insights.py         # POST /insights, GET /insights/latest
 │   │       └── chat.py             # POST /chat
+│   │
+│   ├── mcp/                        # MCP server (FastMCP, Streamable HTTP)
+│   │   └── server.py               # Tools: reconciliation, insights, chat
 │   │
 │   ├── services/                   # Orchestration layer — transport-agnostic agent invocation
 │   │   ├── schemas.py              # Pydantic response models (RunResult, InsightsResult, ChatResponse)

@@ -111,6 +111,25 @@ services:
     depends_on:
       - n8n
 
+  # ── MCP Server — AI agent access ──────────────────────────────────
+  # Start with: docker compose --profile mcp up
+  # Connect Inspector or Claude Desktop to http://localhost:8811/mcp
+  mcp:
+    build: .
+    profiles:
+      - mcp
+    ports:
+      - "8811:8811"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    command: python src/mcp/server.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:
   n8n_data:

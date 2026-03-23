@@ -33,10 +33,10 @@ def minimal_state():
     }
 
 
-def test_ingest_returns_raw_documents_from_loaded_files(
-    minimal_state, mock_documents
-):
-    with patch("agents.reconciliator.nodes.load_documents", return_value=mock_documents):
+def test_ingest_returns_raw_documents_from_loaded_files(minimal_state, mock_documents):
+    with patch(
+        "agents.reconciliator.nodes.load_documents", return_value=mock_documents
+    ):
         result = ingest(minimal_state)
 
     assert "raw_documents" in result
@@ -52,10 +52,10 @@ def test_ingest_returns_raw_documents_from_loaded_files(
     assert raw[1].content == "Bank statement page 1"
 
 
-def test_ingest_calls_load_documents_with_source_files(
-    minimal_state, mock_documents
-):
-    with patch("agents.reconciliator.nodes.load_documents", return_value=mock_documents) as load:
+def test_ingest_calls_load_documents_with_source_files(minimal_state, mock_documents):
+    with patch(
+        "agents.reconciliator.nodes.load_documents", return_value=mock_documents
+    ) as load:
         ingest(minimal_state)
     load.assert_called_once()
     call_arg = load.call_args[0][0]

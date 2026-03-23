@@ -14,4 +14,5 @@ class ReconciliationConfig:
     base_currency: str = "USD"
     image_low_confidence_threshold: float = 0.98
 
+
 DEFAULT_CONFIG = ReconciliationConfig()

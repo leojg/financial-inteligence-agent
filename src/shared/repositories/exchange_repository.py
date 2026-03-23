@@ -16,15 +16,15 @@ class ExchangeRepository:
 
     def __init__(self) -> None:
         """Initialize with base URL from EXCHANGE_RATE_API_KEY env."""
-        self.base_url = (
-            f"https://api.exchangerate.host/convert?access_key={os.getenv('EXCHANGE_RATE_API_KEY')}"
-        )
+        self.base_url = f"https://api.exchangerate.host/convert?access_key={os.getenv('EXCHANGE_RATE_API_KEY')}"
 
     def get_rate(self, date: str, from_currency: str, to_currency: str) -> float | None:
         """Return cached or fetched rate for date/currencies; None on failure."""
         with get_session() as session:
             result = session.execute(
-                text("SELECT rate FROM exchange_rates WHERE date = :d AND from_currency = :f AND to_currency = :t"),
+                text(
+                    "SELECT rate FROM exchange_rates WHERE date = :d AND from_currency = :f AND to_currency = :t"
+                ),
                 {"d": date, "f": from_currency, "t": to_currency},
             )
             row = result.fetchone()

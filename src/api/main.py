@@ -1,5 +1,5 @@
 """Finance Intelligence Agent — API."""
- 
+
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -14,7 +14,8 @@ from api.routes.reconciliation import router as reconciliation_router
 from shared.db import get_session, run_migrations
 
 logger = logging.getLogger(__name__)
- 
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Run migrations on startup, cleanup on shutdown."""
@@ -23,11 +24,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("API ready.")
     yield
 
-app = FastAPI(
-    title="Finance Intelligence Agent",
-    version="1.1.0",
-    lifespan=lifespan
-)
+
+app = FastAPI(title="Finance Intelligence Agent", version="1.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +38,7 @@ app.include_router(reconciliation_router, prefix="/reconciliation")
 app.include_router(insights_router, prefix="/insights")
 app.include_router(chat_router, prefix="/chat")
 
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Liveness check with DB connectivity verification."""
@@ -49,7 +48,7 @@ def health() -> dict[str, str]:
         db_status = "connected"
     except Exception as e:
         db_status = f"error: {e}"
- 
+
     return {
         "status": "ok" if db_status == "connected" else "degraded",
         "db": db_status,

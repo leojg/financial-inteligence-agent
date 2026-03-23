@@ -24,6 +24,7 @@ from shared.repositories.database_repository import (
 # Called by the pipeline's compute_aggregations node.
 # Also available to the chat agent for broad spending questions.
 
+
 @tool
 def get_spending_by_category(
     date_from: str,
@@ -73,14 +74,20 @@ def get_month_over_month_deltas(
     for i, row in enumerate(rows):
         prior = rows[i - 1]["total"] if i > 0 else None
         delta_pct = ((row["total"] - prior) / prior * 100) if prior else None
-        lookback = rows[max(0, i - lookback_months):i]
-        avg_baseline = sum(r["total"] for r in lookback) / len(lookback) if lookback else None
-        result.append({
-            "month": row["month"],
-            "total": row["total"],
-            "delta_pct": round(delta_pct, 2) if delta_pct is not None else None,
-            "avg_baseline": round(avg_baseline, 2) if avg_baseline is not None else None,
-        })
+        lookback = rows[max(0, i - lookback_months) : i]
+        avg_baseline = (
+            sum(r["total"] for r in lookback) / len(lookback) if lookback else None
+        )
+        result.append(
+            {
+                "month": row["month"],
+                "total": row["total"],
+                "delta_pct": round(delta_pct, 2) if delta_pct is not None else None,
+                "avg_baseline": round(avg_baseline, 2)
+                if avg_baseline is not None
+                else None,
+            }
+        )
     return result
 
 
@@ -118,12 +125,14 @@ def get_recurring_charges(
             continue
         cv = statistics.stdev(monthly_totals) / mean if len(monthly_totals) > 1 else 0.0
         if cv <= 0.10:
-            result.append({
-                "merchant_normalized": merchant,
-                "months_seen": len(monthly_totals),
-                "avg_amount": round(mean, 2),
-                "cv": round(cv, 4),
-            })
+            result.append(
+                {
+                    "merchant_normalized": merchant,
+                    "months_seen": len(monthly_totals),
+                    "avg_amount": round(mean, 2),
+                    "cv": round(cv, 4),
+                }
+            )
     result.sort(key=lambda x: float(x["avg_amount"]), reverse=True)
     return result
 
@@ -151,8 +160,10 @@ def get_transfer_fees_summary(
     """
     return DatabaseService().get_transfer_fees_summary(date_from, date_to, accounts)
 
+
 # ── Narrow tools ──────────────────────────────────────────────────────────────
 # Used exclusively by the chat agent for drill-down on specific questions.
+
 
 @tool
 def get_top_merchants_by_amount(
@@ -279,6 +290,7 @@ def get_largest_transactions(
     return DatabaseService().get_largest_transactions(
         date_from, date_to, limit, category, accounts
     )
+
 
 @tool
 def get_receipt_line_breakdown(

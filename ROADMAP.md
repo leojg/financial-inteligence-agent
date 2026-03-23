@@ -198,13 +198,13 @@ The API made the agents programmable. This version connects them to Telegram via
 
 ---
 
-## v1.3 — MCP Server
+## v1.3 — MCP Server ✅
 
 *Goal: expose the service layer as an MCP tool server so Claude, OpenClaw, and other MCP-compatible agents can invoke reconciliation, insights, and chat as native tools.*
 
 The FastAPI routes proved the service layer pattern: thin transport adapters over `src/services/`. This version adds a second adapter — an MCP server — following the same pattern. The key design challenge is file ingestion: MCP tools receive structured JSON inputs, not multipart uploads, so the service layer needs a bytes-based ingestion path alongside the existing file-path flow.
 
-**Scope:**
+**Delivered:**
 - `src/mcp/` — MCP server adapter with SSE transport (Streamable HTTP), following the same thin-adapter pattern as `src/api/`
 - Service layer addition: `reconciliation.run()` accepts `files: list[tuple[str, bytes]]` (filename + content) as an alternative to `file_paths: list[str]`, writing bytes to a temp directory internally — one method, two input shapes
 - MCP tool definitions:

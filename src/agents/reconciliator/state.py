@@ -10,13 +10,16 @@ def keep_last(old: list[Any], new: list[Any]) -> list[Any]:
     """Reducer that keeps the last value of the list (for state updates)."""
     return new if new else old
 
+
 def merge_raw_documents(old: list[Any], new: list[Any]) -> list[Any]:
     """Append new raw_documents to existing (for parallel ingest + ingest_images)."""
     return (old or []) + (new or [])
 
+
 def merge_receipts(old: list[Any], new: list[Any]) -> list[Any]:
     """Append new receipts to existing (parallel ingest paths)."""
     return (old or []) + (new or [])
+
 
 class ReconciliationState(TypedDict):
     """Graph state: source_paths, source_files, raw_documents, transactions, duplicates, suspicious, report."""
@@ -51,4 +54,13 @@ def initial_state(source_paths: list[str]) -> ReconciliationState:
     }
 
 
-__all__ = ["RawDocument", "Receipt", "ReconciliationState", "Transaction", "initial_state", "keep_last", "merge_raw_documents", "merge_receipts"]
+__all__ = [
+    "RawDocument",
+    "Receipt",
+    "ReconciliationState",
+    "Transaction",
+    "initial_state",
+    "keep_last",
+    "merge_raw_documents",
+    "merge_receipts",
+]

@@ -9,6 +9,7 @@ from services.schemas import InsightsResponse
 
 router = APIRouter(tags=["insights"])
 
+
 @router.post("/", response_model=InsightsResponse)
 async def insights(
     date_from: str | None = None,
@@ -17,7 +18,13 @@ async def insights(
     force_recompute: bool = False,
 ) -> InsightsResponse:
     """Run the insights pipeline and return the result."""
-    return run(date_from=date_from, date_to=date_to, accounts=accounts, force_recompute=force_recompute)
+    return run(
+        date_from=date_from,
+        date_to=date_to,
+        accounts=accounts,
+        force_recompute=force_recompute,
+    )
+
 
 @router.get("/latest", response_model=InsightsResponse)
 async def get_latest_insights(
@@ -26,6 +33,8 @@ async def get_latest_insights(
     """Return the latest cached insights without re-running the pipeline."""
     result = get_latest(accounts=accounts)
     if result is None:
-        raise HTTPException(status_code=404, detail="No cached insights found. Run the pipeline first.")
+        raise HTTPException(
+            status_code=404, detail="No cached insights found. Run the pipeline first."
+        )
 
     return result

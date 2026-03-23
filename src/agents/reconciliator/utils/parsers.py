@@ -9,6 +9,7 @@ from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
 
+
 def load_excel_documents(paths: list[str]) -> list[Document]:
     """Load Excel files (paths only) as LangChain Documents using pandas."""
     documents = []

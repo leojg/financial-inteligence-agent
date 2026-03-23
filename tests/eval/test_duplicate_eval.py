@@ -19,7 +19,13 @@ def test_duplicate_precision_recall(duplicate_pairs_labels, non_duplicate_pairs_
     txn_map: dict[tuple, str] = {}  # canonical key → transaction id
 
     def get_or_create_id(entry: dict) -> str:
-        key = (entry["date"], entry["merchant"], entry["amount"], entry["currency"], entry["account"])
+        key = (
+            entry["date"],
+            entry["merchant"],
+            entry["amount"],
+            entry["currency"],
+            entry["account"],
+        )
         if key not in txn_map:
             t = make_transaction(entry)
             txn_map[key] = t.id
@@ -84,20 +90,18 @@ def test_duplicate_precision_recall(duplicate_pairs_labels, non_duplicate_pairs_
     precision = true_pos / denom if denom > 0 else 1.0
 
     table = [
-        ["Labeled duplicate pairs",         len(labeled_dup_pairs)],
-        ["Labeled non-duplicate pairs",      len(labeled_non_dup_pairs)],
-        ["True positives",                   true_pos],
-        ["False negatives (missed dups)",    false_neg],
-        ["False positives (wrong dups)",     false_pos],
-        ["Recall",                           f"{recall:.1%}"],
-        ["Precision",                        f"{precision:.1%}"],
+        ["Labeled duplicate pairs", len(labeled_dup_pairs)],
+        ["Labeled non-duplicate pairs", len(labeled_non_dup_pairs)],
+        ["True positives", true_pos],
+        ["False negatives (missed dups)", false_neg],
+        ["False positives (wrong dups)", false_pos],
+        ["Recall", f"{recall:.1%}"],
+        ["Precision", f"{precision:.1%}"],
     ]
 
-    assert recall >= RECALL_THRESHOLD, (
-        "Duplicate recall below threshold.\n"
-        + tabulate(table, tablefmt="simple")
+    assert recall >= RECALL_THRESHOLD, "Duplicate recall below threshold.\n" + tabulate(
+        table, tablefmt="simple"
     )
     assert precision >= PRECISION_THRESHOLD, (
-        "Duplicate precision below threshold.\n"
-        + tabulate(table, tablefmt="simple")
+        "Duplicate precision below threshold.\n" + tabulate(table, tablefmt="simple")
     )

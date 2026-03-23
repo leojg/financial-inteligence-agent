@@ -12,6 +12,7 @@ from shared.repositories.database_repository import DatabaseRepository
 
 logger = logging.getLogger(__name__)
 
+
 def run(
     date_from: str | None = None,
     date_to: str | None = None,

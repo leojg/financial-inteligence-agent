@@ -30,7 +30,12 @@ def send_message(
     """
     conversation_id = conversation_id or str(uuid.uuid4())
     graph = make_graph(config)
-    result = graph.invoke({"messages": [HumanMessage(content=message)], "conversation_id": conversation_id})
+    result = graph.invoke(
+        {
+            "messages": [HumanMessage(content=message)],
+            "conversation_id": conversation_id,
+        }
+    )
 
     last = result["messages"][-1]
     reply: str = last.content if hasattr(last, "content") else str(last)

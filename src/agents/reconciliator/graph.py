@@ -34,6 +34,7 @@ def _has_images(state: ReconciliationState) -> str:
             return "ingest_images"
     return "skip_images"
 
+
 def _has_documents(state: ReconciliationState) -> str:
     """Return 'ingest' if source_files has document paths, else 'skip_documents'."""
     exts = (".csv", ".xlsx", ".xls", ".pdf")
@@ -50,7 +51,11 @@ def _make_has_low_confidence(threshold: float) -> Callable[[ReconciliationState]
     def _has_low_confidence(state: ReconciliationState) -> str:
         transactions = state.get("transactions") or []
         for t in transactions:
-            conf = t.get("confidence") if isinstance(t, dict) else getattr(t, "confidence", None)
+            conf = (
+                t.get("confidence")
+                if isinstance(t, dict)
+                else getattr(t, "confidence", None)
+            )
             if conf is not None and conf < threshold:
                 return "review_low_confidence_transactions"
         return "convert_currency"
@@ -91,18 +96,12 @@ def make_graph(
     graph.add_conditional_edges(
         "prepare_ingest",
         _has_documents,
-        {
-            "ingest": "ingest",
-            "skip_documents": "skip_documents"
-        }
+        {"ingest": "ingest", "skip_documents": "skip_documents"},
     )
     graph.add_conditional_edges(
         "prepare_ingest",
         _has_images,
-        {
-            "ingest_images": "ingest_images",
-            "skip_images": "skip_images"
-        }
+        {"ingest_images": "ingest_images", "skip_images": "skip_images"},
     )
     graph.add_edge("ingest", "normalize")
     graph.add_edge("ingest_images", "normalize")
@@ -134,5 +133,6 @@ def make_graph(
         checkpointer=checkpointer,
         interrupt_before=interrupt_before,
     )
+
 
 graph = make_graph(checkpointer=None)

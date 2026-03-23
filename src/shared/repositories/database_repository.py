@@ -47,7 +47,9 @@ class DatabaseRepository:
         """Return cached transactions JSON for this content_hash, or None on miss."""
         with get_session() as session:
             result = session.execute(
-                text("SELECT transactions_json FROM normalized_document_cache WHERE content_hash = :h"),
+                text(
+                    "SELECT transactions_json FROM normalized_document_cache WHERE content_hash = :h"
+                ),
                 {"h": content_hash},
             )
             row = result.fetchone()
@@ -72,7 +74,11 @@ class DatabaseRepository:
                         source_file = :source_file,
                         transactions_json = :transactions_json
                 """),
-                {"content_hash": content_hash, "source_file": source_file, "transactions_json": transactions_json},
+                {
+                    "content_hash": content_hash,
+                    "source_file": source_file,
+                    "transactions_json": transactions_json,
+                },
             )
             session.commit()
 
@@ -85,7 +91,9 @@ class DatabaseRepository:
         """Return cached category for a normalized merchant name, or None on miss."""
         with get_session() as session:
             result = session.execute(
-                text("SELECT category FROM merchant_categories WHERE merchant_normalized = :m"),
+                text(
+                    "SELECT category FROM merchant_categories WHERE merchant_normalized = :m"
+                ),
                 {"m": merchant_normalized},
             )
             row = result.fetchone()
@@ -109,14 +117,21 @@ class DatabaseRepository:
                         source = :source,
                         updated_at = :updated_at
                 """),
-                {"merchant_normalized": merchant_normalized, "category": category, "source": source, "updated_at": _now()},
+                {
+                    "merchant_normalized": merchant_normalized,
+                    "category": category,
+                    "source": source,
+                    "updated_at": _now(),
+                },
             )
             session.commit()
 
     # ── Duplicate pairs ──────────────────────────────────────────────────────
 
     @staticmethod
-    def transaction_fingerprint(date: str, amount: float, currency: str, merchant: str) -> str:
+    def transaction_fingerprint(
+        date: str, amount: float, currency: str, merchant: str
+    ) -> str:
         """Return a stable SHA-256 fingerprint for a transaction (identifies same real-world charge)."""
         key = f"{date}|{amount}|{currency}|{DatabaseRepository.normalize_merchant(merchant)}"
         return hashlib.sha256(key.encode()).hexdigest()
@@ -126,7 +141,9 @@ class DatabaseRepository:
         a, b = _ordered(fp_a, fp_b)
         with get_session() as session:
             result = session.execute(
-                text("SELECT is_duplicate, reason FROM duplicate_pairs WHERE fingerprint_a = :a AND fingerprint_b = :b"),
+                text(
+                    "SELECT is_duplicate, reason FROM duplicate_pairs WHERE fingerprint_a = :a AND fingerprint_b = :b"
+                ),
                 {"a": a, "b": b},
             )
             row = result.fetchone()
@@ -255,19 +272,23 @@ class DatabaseRepository:
     def get_runs(self) -> list[dict[str, Any]]:
         """Return all runs ordered newest-first."""
         with get_session() as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text("""
                 SELECT run_id, thread_id, created_at, completed_at, source_paths,
                        status, total_transactions, total_duplicates, total_suspicious, base_currency
                 FROM runs_history
                 ORDER BY created_at DESC
-            """))
+            """)
+            )
             return self._rows(result)
 
     def get_run_transactions(self, run_id: str) -> list[dict[str, Any]]:
         """Return all transactions for a given run_id."""
         with get_session() as session:
             result = session.execute(
-                text("SELECT * FROM transactions WHERE run_id = :run_id ORDER BY date ASC"),
+                text(
+                    "SELECT * FROM transactions WHERE run_id = :run_id ORDER BY date ASC"
+                ),
                 {"run_id": run_id},
             )
             return self._rows(result)
@@ -276,14 +297,20 @@ class DatabaseRepository:
         """Return distinct accounts and categories across all stored transactions."""
         with get_session() as session:
             accounts = [
-                str(r[0]) for r in session.execute(
+                str(r[0])
+                for r in session.execute(
                     text("SELECT DISTINCT account FROM transactions ORDER BY account")
-                ).fetchall() if r[0]
+                ).fetchall()
+                if r[0]
             ]
             categories = [
-                str(r[0]) for r in session.execute(
-                    text("SELECT DISTINCT category FROM transactions WHERE category IS NOT NULL ORDER BY category")
-                ).fetchall() if r[0]
+                str(r[0])
+                for r in session.execute(
+                    text(
+                        "SELECT DISTINCT category FROM transactions WHERE category IS NOT NULL ORDER BY category"
+                    )
+                ).fetchall()
+                if r[0]
             ]
         return {"accounts": accounts, "categories": categories}
 
@@ -330,7 +357,9 @@ class DatabaseRepository:
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         with get_session() as session:
             result = session.execute(
-                text(f"SELECT * FROM transactions {where} ORDER BY date DESC LIMIT :limit"),
+                text(
+                    f"SELECT * FROM transactions {where} ORDER BY date DESC LIMIT :limit"
+                ),
                 params,
             )
             return self._rows(result)
@@ -340,9 +369,11 @@ class DatabaseRepository:
     def get_active_goals(self) -> list[dict[str, Any]]:
         """Return all active user goals."""
         with get_session() as session:
-            result = session.execute(text(
-                "SELECT id, content, created_at, updated_at FROM user_goals WHERE active = 1 ORDER BY created_at ASC"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT id, content, created_at, updated_at FROM user_goals WHERE active = 1 ORDER BY created_at ASC"
+                )
+            )
             return self._rows(result)
 
     def upsert_goal(self, content: str, goal_id: int | None = None) -> None:
@@ -351,12 +382,16 @@ class DatabaseRepository:
         with get_session() as session:
             if goal_id is None:
                 session.execute(
-                    text("INSERT INTO user_goals (content, active, created_at, updated_at) VALUES (:content, 1, :now, :now)"),
+                    text(
+                        "INSERT INTO user_goals (content, active, created_at, updated_at) VALUES (:content, 1, :now, :now)"
+                    ),
                     {"content": content, "now": now},
                 )
             else:
                 session.execute(
-                    text("UPDATE user_goals SET content = :content, updated_at = :now WHERE id = :goal_id"),
+                    text(
+                        "UPDATE user_goals SET content = :content, updated_at = :now WHERE id = :goal_id"
+                    ),
                     {"content": content, "now": now, "goal_id": goal_id},
                 )
             session.commit()
@@ -365,7 +400,9 @@ class DatabaseRepository:
         """Mark a goal as inactive (soft-delete)."""
         with get_session() as session:
             session.execute(
-                text("UPDATE user_goals SET active = 0, updated_at = :now WHERE id = :goal_id"),
+                text(
+                    "UPDATE user_goals SET active = 0, updated_at = :now WHERE id = :goal_id"
+                ),
                 {"now": _now(), "goal_id": goal_id},
             )
             session.commit()
@@ -392,7 +429,8 @@ class DatabaseRepository:
         """
         with get_session() as session:
             result = session.execute(
-                text(sql), {"date_from": date_from, "date_to": date_to, **account_params}
+                text(sql),
+                {"date_from": date_from, "date_to": date_to, **account_params},
             )
             return self._rows(result)
 
@@ -416,7 +454,8 @@ class DatabaseRepository:
         """
         with get_session() as session:
             result = session.execute(
-                text(sql), {"date_from": date_from, "date_to": date_to, **account_params}
+                text(sql),
+                {"date_from": date_from, "date_to": date_to, **account_params},
             )
             return self._rows(result)
 
@@ -442,7 +481,8 @@ class DatabaseRepository:
         """
         with get_session() as session:
             result = session.execute(
-                text(sql), {"date_from": date_from, "date_to": date_to, **account_params}
+                text(sql),
+                {"date_from": date_from, "date_to": date_to, **account_params},
             )
             return self._rows(result)
 
@@ -473,7 +513,12 @@ class DatabaseRepository:
         with get_session() as session:
             result = session.execute(
                 text(sql),
-                {"date_from": date_from, "date_to": date_to, **fee_params, **account_params},
+                {
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    **fee_params,
+                    **account_params,
+                },
             )
             return self._rows(result)
 
@@ -505,7 +550,13 @@ class DatabaseRepository:
         with get_session() as session:
             result = session.execute(
                 text(sql),
-                {"date_from": date_from, "date_to": date_to, "limit": limit, **category_params, **account_params},
+                {
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    "limit": limit,
+                    **category_params,
+                    **account_params,
+                },
             )
             return self._rows(result)
 
@@ -530,7 +581,7 @@ class DatabaseRepository:
             SELECT * FROM transactions
             WHERE merchant_normalized LIKE :pattern
               AND duplicate_of IS NULL
-              {' '.join(date_clauses)}
+              {" ".join(date_clauses)}
               {account_clause}
             ORDER BY date DESC
         """
@@ -596,12 +647,14 @@ class DatabaseRepository:
     def get_latest_insights_cache(self) -> dict[str, Any] | None:
         """Return the most recent cached insights (by created_at), or None if the cache is empty."""
         with get_session() as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text("""
                 SELECT date_from, date_to, aggregations_json, habits_json, suggestions_json
                 FROM insights_cache
                 ORDER BY created_at DESC
                 LIMIT 1
-            """))
+            """)
+            )
             row = result.fetchone()
         if row is None:
             return None
@@ -674,7 +727,12 @@ class DatabaseRepository:
         with get_session() as session:
             result = session.execute(
                 text(sql),
-                {"category": category, "date_from": date_from, "date_to": date_to, **account_params},
+                {
+                    "category": category,
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    **account_params,
+                },
             )
             return self._rows(result)
 
@@ -727,18 +785,26 @@ class DatabaseRepository:
         with get_session() as session:
             result = session.execute(
                 text(sql),
-                {"date_from": date_from, "date_to": date_to, "limit": limit, **category_params, **account_params},
+                {
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    "limit": limit,
+                    **category_params,
+                    **account_params,
+                },
             )
             return self._rows(result)
 
     def get_latest_reconciliation_run_date(self) -> str | None:
         """Return MAX(completed_at) from runs_history where status = 'complete', or None."""
         with get_session() as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text("""
                 SELECT MAX(completed_at) AS latest_completed
                 FROM runs_history
                 WHERE status = 'complete'
-            """))
+            """)
+            )
             row = result.fetchone()
         return str(row[0]) if row and row[0] is not None else None
 
@@ -858,6 +924,7 @@ class DatabaseRepository:
         """
         with get_session() as session:
             result = session.execute(
-                text(sql), {"date_from": date_from, "date_to": date_to, **account_params}
+                text(sql),
+                {"date_from": date_from, "date_to": date_to, **account_params},
             )
             return self._rows(result)

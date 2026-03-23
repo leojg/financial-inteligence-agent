@@ -27,8 +27,16 @@ def _base_state(**overrides: Any) -> ChatState:
         "date_to": "2026-01-31",
         "accounts": None,
         "aggregations": {"spending_by_category": {"Food": 200.0}},
-        "habits": [{"category": "Food", "observation": "High spend", "severity": "warning"}],
-        "suggestions": [{"title": "Cut dining", "body": "Consider cooking at home", "severity": "info"}],
+        "habits": [
+            {"category": "Food", "observation": "High spend", "severity": "warning"}
+        ],
+        "suggestions": [
+            {
+                "title": "Cut dining",
+                "body": "Consider cooking at home",
+                "severity": "info",
+            }
+        ],
         "goals_prompt": None,
     }
     state.update(overrides)  # type: ignore[typeddict-item]
@@ -62,11 +70,15 @@ class TestShouldContinue:
     def test_routes_to_end_when_no_tool_calls(self) -> None:
         state = _base_state(messages=[_make_plain_message()])
         from langgraph.graph import END
+
         assert _should_continue(state) == END
 
     def test_routes_to_end_on_plain_text_response(self) -> None:
         from langgraph.graph import END
-        state = _base_state(messages=[_make_plain_message("Spending was $500 this month.")])
+
+        state = _base_state(
+            messages=[_make_plain_message("Spending was $500 this month.")]
+        )
         assert _should_continue(state) == END
 
 
@@ -92,7 +104,9 @@ class TestSystemPrompt:
         return system_msgs[0]
 
     def test_goals_injected_when_present(self) -> None:
-        goals = "The user has defined the following financial goals.\n- Save $1000/month"
+        goals = (
+            "The user has defined the following financial goals.\n- Save $1000/month"
+        )
         state = _base_state(
             messages=[HumanMessage(content="How am I doing?")],
             goals_prompt=goals,
@@ -129,8 +143,16 @@ class TestSystemPrompt:
         assert "2025-06-30" in prompt.content
 
     def test_habits_and_suggestions_included(self) -> None:
-        habits = [{"category": "Dining", "observation": "Very frequent", "severity": "warning"}]
-        suggestions = [{"title": "Budget", "body": "Set a monthly limit", "severity": "info"}]
+        habits = [
+            {
+                "category": "Dining",
+                "observation": "Very frequent",
+                "severity": "warning",
+            }
+        ]
+        suggestions = [
+            {"title": "Budget", "body": "Set a monthly limit", "severity": "info"}
+        ]
         state = _base_state(
             messages=[HumanMessage(content="Any tips?")],
             habits=habits,
@@ -166,7 +188,10 @@ class TestGraphTopology:
         mock_db = MagicMock()
         mock_db.get_transaction_date_range.return_value = ("2026-01-01", "2026-01-31")
         mock_db.get_insights_cache.return_value = {
-            "aggregations": {"spending_by_category": {"Food": 200.0}, "transfer_fees_summary": {}},
+            "aggregations": {
+                "spending_by_category": {"Food": 200.0},
+                "transfer_fees_summary": {},
+            },
             "habits": [],
             "suggestions": [],
         }

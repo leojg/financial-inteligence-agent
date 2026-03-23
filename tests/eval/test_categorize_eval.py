@@ -13,11 +13,11 @@ ACCURACY_THRESHOLD = 0.75
 # Known semantic equivalents: label (lowercased) → acceptable LLM responses (lowercased).
 # Used to handle cases where the LLM uses a valid synonym for the labeled category.
 SEMANTIC_EQUIVALENTS: dict[str, set[str]] = {
-    "healthcare":     {"fitness", "health & fitness", "wellness"},
-    "transfer":       {"other income"},
-    "other income":   {"transfer"},
-    "salary":         {"freelance"},
-    "freelance":      {"salary"},
+    "healthcare": {"fitness", "health & fitness", "wellness"},
+    "transfer": {"other income"},
+    "other income": {"transfer"},
+    "salary": {"freelance"},
+    "freelance": {"salary"},
     "fees & charges": {"other"},  # SaaS subscriptions inconsistently get "Other"
 }
 
@@ -59,7 +59,9 @@ def test_categorize_accuracy(categorization_labels):
         if is_match:
             correct += 1
         else:
-            mismatches.append([label["merchant"], label["account"], expected, actual or "(null)"])
+            mismatches.append(
+                [label["merchant"], label["account"], expected, actual or "(null)"]
+            )
 
     total = len(transactions)
     accuracy = correct / total if total > 0 else 0.0
@@ -70,7 +72,9 @@ def test_categorize_accuracy(categorization_labels):
         f"- threshold: {ACCURACY_THRESHOLD:.0%}\n"
         + (
             "\nMismatches:\n"
-            + tabulate(mismatches, headers=["Merchant", "Account", "Expected", "Actual"])
+            + tabulate(
+                mismatches, headers=["Merchant", "Account", "Expected", "Actual"]
+            )
             if mismatches
             else ""
         )

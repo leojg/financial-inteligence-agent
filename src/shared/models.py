@@ -9,7 +9,7 @@ class Transaction(BaseModel):
     """A single normalized transaction (from normalize/convert_currency)."""
 
     id: str  # UUID generated at normalization
-    date: str # ISO Format
+    date: str  # ISO Format
     amount_original: float
     amount_base: float | None = None
     currency: str
@@ -23,7 +23,7 @@ class Transaction(BaseModel):
     needs_review: bool = False
     review_reason: str | None = None
     review_status: str | None = None
-    confidence: float | None = None # Confidence score for the transaction
+    confidence: float | None = None  # Confidence score for the transaction
 
 
 class RawDocument(BaseModel):
@@ -32,7 +32,8 @@ class RawDocument(BaseModel):
     source_file: str
     file_type: str
     content: str  # raw text for pdf, markdown table for xlsx
-    confidence: float | None = None # Confidence score for the image document
+    confidence: float | None = None  # Confidence score for the image document
+
 
 class Habit(BaseModel):
     """A habit detected in the spending data."""
@@ -44,7 +45,7 @@ class Habit(BaseModel):
 
 class Suggestion(BaseModel):
     """A suggestion for the user to improve their spending habits."""
-    
+
     type: str
     title: str
     body: str
@@ -53,10 +54,11 @@ class Suggestion(BaseModel):
 
 class InsightsOutput(BaseModel):
     """The output of the insights agent."""
-    
+
     habits: list[Habit]
     suggestions: list[Suggestion]
-    
+
+
 class ReceiptLine(BaseModel):
     """A single line item within a receipt."""
 

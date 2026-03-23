@@ -29,6 +29,7 @@ dependencies = [
     "streamlit>=1.28.0",
     "fastapi[standard]>=0.100.0",
     "uvicorn>=0.20.0",
+    "mcp>=1.0.0",
 ]
 
 

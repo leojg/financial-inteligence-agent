@@ -1,4 +1,5 @@
 """Alembic env — reads DATABASE_URL from shared.db at runtime."""
+
 from __future__ import annotations
 
 import sys
