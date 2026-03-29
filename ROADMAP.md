@@ -225,6 +225,60 @@ The FastAPI routes proved the service layer pattern: thin transport adapters ove
 
 ---
 
+## v1.4 — Evaluation Framework
+
+*Goal: establish reliable baselines for every LLM-dependent node across all three graphs so that model and prompt optimizations can be measured, not guessed.*
+
+The existing eval suite covers categorization accuracy (89.9%) and duplicate detection precision/recall (100%/100%), but the test data is too easy, the matching criteria too lenient, and most LLM nodes have no eval coverage at all. The 100% duplicate scores are a red flag, not a victory, the synthetic pairs only exercise the trivial exact-match tier.
+
+This milestone hardens the evaluation framework into something trustworthy across all three agents, so the next phase (model and prompt optimizations) has honest numbers to improve against.
+
+**Scope:**
+
+- Improved `generate_samples.py` with harder test data: merchant name variations across banks, fuzzy amount pairs, false positive bait for duplicates, ambiguous merchants for categorization, suspicious activity patterns (outlier amounts, rapid-fire charges), and a new normalization labels section
+- Normalization eval: field-level accuracy (date, merchant, amount, currency) for the normalize node against labeled synthetic data
+- Duplicate eval rewrite: harder pairs, per-tier metrics (fingerprint vs fuzzy vs LLM), tier-hit diagnostics, expanded non-duplicate set (25 to 30 pairs)
+- Categorization eval revision: tighter semantic equivalents, alternatives-aware scoring (primary vs alternative vs miss)
+- Suspicious activity eval: recall on known suspicious patterns, precision on clean transactions, broken down by pattern type
+- Insights `generate_insights` eval: LLM-as-judge scoring on faithfulness to aggregation data, goal relevance, and coverage, against curated aggregation snapshots with documented expectations
+- Chat tool selection eval: labeled question set mapped to expected tool calls, tool selection accuracy metric
+- Chat response faithfulness eval: LLM-as-judge comparing tool output to final response, plus out-of-scope handling verification
+- Baseline numbers documented as the reference point for the optimization phase
+
+**Does not deliver:**
+- Model or prompt optimizations (this milestone establishes baselines, the next milestone improves them)
+- Vision/image extraction eval (deferred, higher cost, added incrementally once text-based eval is proven)
+- End-to-end multi-graph eval (node-level baselines first)
+
+**Full spec:** `docs/v1.4-evaluation-framework.md`
+
+---
+
+## v1.5 — Prompt and Model Optimization
+
+*Goal: use the v1.4 baselines to make targeted improvements to LLM output quality and reduce running costs, with every change measured against the eval framework.*
+
+This milestone is experiment-driven. Every optimization follows the same loop: identify a target from the v1.4 baselines, make exactly one change (prompt or model, not both), run the eval suite, compare quality and cost deltas, keep or revert.
+
+**Scope:**
+
+- Comparison runner infrastructure: run the same eval test set against multiple model/prompt configurations and produce side-by-side metrics with cost estimates
+- Prompt variant management: named prompt alternatives per node, selectable by the comparison runner without branch juggling
+- Reconciliation experiments: currency extraction improvements (prompt debiasing, few-shot examples, potential model upgrade for normalize, deterministic post-processing), categorization prompt anchoring (few-shot examples, preferred category vocabulary), duplicate detection prompt improvements if v1.4 reveals weaknesses in fuzzy/LLM tiers
+- Insights experiments: test gpt-4o-mini as a replacement for gpt-4o, structured output guidance, few-shot examples
+- Chat experiments: test gpt-4o-mini for all chat (baseline before building routing), classifier-based model routing if mini fails on complex questions, tool description improvements
+- Documented comparison tables for every experiment, saved as reference
+- Cost baseline: estimated per-run cost for reconciliation, insights, and per-chat-message
+
+**Does not deliver:**
+- New features or architectural changes (purely quality/cost optimization on existing nodes)
+- Vision model optimization (deferred)
+- Chat message persistence or summarization (separate milestone)
+
+**Full spec:** `docs/v1.5-prompt-model-optimization.md`
+
+---
+
 ## Backlog / Future Considerations
 
 Ideas that are out of scope for the current roadmap but worth tracking:

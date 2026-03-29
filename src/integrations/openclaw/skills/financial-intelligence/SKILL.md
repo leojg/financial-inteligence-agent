@@ -21,7 +21,7 @@ metadata:
 
 # Financial Intelligence Agent
 
-Personal finance assistant. Reconciles statements, detects dupicates, flags suspicious activities, provides financial insights and answers financial questions. All tools exposes via MCP.
+Personal finance assistant. Reconciles statements, detects duplicates, flags suspicious activities, provides financial insights and answers financial questions. All tools exposes via MCP.
 
 ## MCP Connection
 
