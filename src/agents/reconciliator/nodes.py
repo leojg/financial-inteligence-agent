@@ -589,7 +589,11 @@ def make_detect_duplicates_node(
         fp_a: str,
         fp_b: str,
     ) -> tuple[bool, bool, str]:
-        """Same merchant? Uses duplicate_pairs cache, then a small model. Returns (same_merchant, needs_review, reason)."""
+        """Decide whether two merchant strings refer to the same business.
+
+        Uses the duplicate_pairs cache when present; otherwise calls a small model.
+        Returns (same_merchant, needs_review, reason).
+        """
         cached = database_service.get_duplicate_pair(fp_a, fp_b)
         if cached is not None:
             logger.debug(
@@ -723,23 +727,17 @@ Reply ONLY with JSON, no preamble, no markdown:
                             update={"duplicate_of": t_a.id}
                         )
                         matched_ids.update([t_a.id, t_b.id])
-                        duplicates.extend(
-                            [updated[t_a.id], updated[t_b.id]]
-                        )
+                        duplicates.extend([updated[t_a.id], updated[t_b.id]])
                     else:
-                        same_m, needs_m_rev, m_reason = (
-                            _check_merchant_equivalence_llm(
-                                database_service, t_a, t_b, fp_a, fp_b
-                            )
+                        same_m, needs_m_rev, m_reason = _check_merchant_equivalence_llm(
+                            database_service, t_a, t_b, fp_a, fp_b
                         )
                         if same_m:
                             updated[t_b.id] = t_b.model_copy(
                                 update={"duplicate_of": t_a.id}
                             )
                             matched_ids.update([t_a.id, t_b.id])
-                            duplicates.extend(
-                                [updated[t_a.id], updated[t_b.id]]
-                            )
+                            duplicates.extend([updated[t_a.id], updated[t_b.id]])
                         elif needs_m_rev:
                             updated[t_b.id] = t_b.model_copy(
                                 update={

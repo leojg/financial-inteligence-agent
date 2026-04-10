@@ -1,6 +1,6 @@
 # Finance Intelligence Agent
 
-![Version](https://img.shields.io/badge/version-v1.1-blue)
+![Version](https://img.shields.io/badge/version-v1.4-blue)
 
 An AI agent system for personal finance intelligence built on LangGraph. It ingests bank statements and receipts from multiple accounts, normalizes and categorizes transactions, detects duplicates and suspicious activity across sources, produces structured reconciliation reports, and surfaces spending patterns and financial insights over time — with human-in-the-loop review steps throughout.
 
@@ -412,10 +412,14 @@ finance-intelligence-agent/
 ├── tests/
 │   ├── unit_tests/                 # Mocked unit tests (no API keys required)
 │   └── eval/                       # LLM accuracy evals (real API calls)
-│       ├── conftest.py             # Fixtures: labels loader, API key guard
+│       ├── conftest.py             # Fixtures: eval_labels loader, API key guard
 │       ├── helpers.py              # Transaction factory shared by eval tests
-│       ├── test_categorize_eval.py # Categorization accuracy (threshold: 75%)
-│       └── test_duplicate_eval.py  # Duplicate precision/recall (recall ≥ 90%, precision ≥ 85%)
+│       ├── test_normalize_eval.py  # Normalize node: field-level match vs labeled synthetic files
+│       ├── test_categorize_eval.py # Categorization accuracy vs expected_category
+│       ├── test_duplicate_eval.py  # Duplicate precision/recall (union-find vs labeled pairs)
+│       ├── test_suspicious_eval.py # Suspicious flagging recall / safe-transaction precision
+│       ├── test_insights_eval.py   # generate_insights: coverage + numeric grounding heuristics
+│       └── test_chat_tool_selection.py # Chat ReAct: expected tool names invoked
 ├── data/                           # Generated sample data and database
 ├── Dockerfile
 ├── docker-compose.yml
@@ -562,23 +566,37 @@ make spell_check
 
 ### Eval Suite
 
-`tests/eval/` contains node-level accuracy evals that measure LLM output quality against labeled synthetic data. Unlike unit tests, these make real API calls and are intentionally excluded from `make test` and CI.
+`tests/eval/` contains node-level evals that measure LLM output quality against labeled synthetic data (v1.4 framework; see `docs/v1.4-evaluation-framework.md`). Unlike unit tests, these make real API calls and are excluded from `make test` (`-m "not eval"`).
 
 **How it works:**
 
-1. `scripts/generate_samples.py` writes `data/eval_labels.json` alongside the synthetic statement files. Labels are derived directly from the ground-truth constants in the script (`ITAU_TRANSACTIONS`, `BROU_TRANSACTIONS`, etc.) — expected categories, known duplicate pairs, and non-duplicate pairs are all extracted automatically.
+1. `scripts/generate_samples.py` writes `data/eval_labels.json` alongside the synthetic statement files. Labels come from the ground-truth constants in the script (`ITAU_TRANSACTIONS`, `BROU_TRANSACTIONS`, etc.): categorization rows, duplicate and non-duplicate pairs, normalization entries per file, and suspicious `should_flag` / `should_not_flag` blocks.
 
-2. `make eval` loads those labels, builds `Transaction` objects, calls the real `categorize` and `detect_duplicates` nodes, and computes metrics.
+2. `make eval` (or `make eval-full`) runs all `@pytest.mark.eval` tests: normalize (ingest path vs labels), categorize, duplicate detection, suspicious flagging, insights `generate_insights`, and chat tool selection. Metrics and tables print to the console (`-s`).
 
-**Thresholds (from last run):**
+**Asserted floors (see each test file):**
 
-| Test | Metric | Threshold | Last result |
-|---|---|---|---|
-| `test_categorize_accuracy` | Accuracy | ≥ 75% | 89.9% |
-| `test_duplicate_precision_recall` | Recall | ≥ 90% | 100% |
-| `test_duplicate_precision_recall` | Precision | ≥ 85% | 100% |
+| Test file | What it checks | Floor |
+|---|---|---|
+| `test_normalize_eval.py` | Date, merchant, amount, currency, account vs `normalization` labels | Prints metrics only (no threshold assert yet) |
+| `test_categorize_eval.py` | Accuracy vs `expected_category` | ≥ 70% |
+| `test_duplicate_eval.py` | Recall / precision vs labeled dup and non-dup pairs | Recall ≥ 55%, precision ≥ 45% |
+| `test_suspicious_eval.py` | Recall on should-flag ids; safe precision on should-not-flag | ≥ 35% each |
+| `test_insights_eval.py` | Keyword coverage + numeric grounding vs hand-crafted aggregation profiles | Coverage ≥ 55%, grounding ≥ 52% |
+| `test_chat_tool_selection.py` | Expected tool names appear in the ReAct trace | Per-case assert |
 
-Matching uses case-insensitive substring comparison plus a semantic equivalents map for known synonyms (`Healthcare` ↔ `Fitness`, `Salary` ↔ `Freelance`, `Transfer` ↔ `Other Income`, `Fees & Charges` ↔ `Other`). Duplicate detection uses union-find clustering so transitive groups (A→B and A→C implies B≡C) are handled correctly.
+Categorization matching uses case-insensitive substring comparison plus a **semantic equivalents** map in the test (e.g. `healthcare` ↔ `fitness` / `wellness`, `salary` ↔ `freelance`, `subscriptions` ↔ `entertainment`, `withdrawals` ↔ `other`). Duplicate detection uses **union-find** clustering so transitive groups are evaluated correctly.
+
+**Latest full run snapshot** (`make eval`: **19** passed in **~194 s**; pytest may show a handful of dependency warnings, e.g. LangChain / Pydantic on Python 3.14 — numbers below vary by model and prompt):
+
+| Area | Result (representative) |
+|---|---|
+| Categorization | PASS (meets accuracy floor) |
+| Duplicate detection | Recall **100%** (11/11 dup pairs), precision **68.8%**; **5** false positives on labeled non-dups (mostly **false_positive_bait** tier) |
+| Suspicious | Should-flag recall **100%**, should-not-flag safe precision **100%** |
+| Insights | Mean keyword coverage **100%**, mean numeric grounding **~69%** |
+| Normalize | **144** expected rows across four PDF/XLSX files; printed table shows **0** miss / **0** extra rows; **all4** (date+merchant+amount+currency) **56/56**, **36/36**, **23/23**, **29/29** — account column may be partial (e.g. **0/56** on Itaú in the logged run) |
+| Chat tool selection | **13** parametrized cases PASS (expected tools invoked) |
 
 To regenerate labels after changing the synthetic data:
 

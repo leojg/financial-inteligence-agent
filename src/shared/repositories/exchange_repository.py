@@ -3,7 +3,7 @@
 import logging
 import os
 
-import requests  # type: ignore[import-untyped]
+import requests
 from sqlalchemy import text
 
 from shared.db import get_session

@@ -19,7 +19,7 @@ load_dotenv()
 
 # noqa: E402 for imports below
 
-import pandas as pd  # type: ignore[import-untyped]  # noqa: E402
+import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from agents.reconciliator.configuration import DEFAULT_CONFIG  # noqa: E402

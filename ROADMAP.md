@@ -252,6 +252,8 @@ This milestone hardens the evaluation framework into something trustworthy acros
 
 **Full spec:** `docs/v1.4-evaluation-framework.md`
 
+**Status:** Core deliverables are in place (samples + labels, normalize / categorize / duplicate / suspicious / insights / chat tool-selection evals, documented baselines). Remaining spec refinements (e.g. alternatives-aware categorize scoring, duplicate implementation-tier diagnostics, insights judge, chat §4.2) are tracked under **Backlog → Eval & pipeline hardening**.
+
 ---
 
 ## v1.5 — Prompt and Model Optimization
@@ -282,6 +284,33 @@ This milestone is experiment-driven. Every optimization follows the same loop: i
 ## Backlog / Future Considerations
 
 Ideas that are out of scope for the current roadmap but worth tracking:
+
+### Eval & pipeline hardening (post–v1.4)
+
+Follow-ups deferred from the v1.4 evaluation framework; see `docs/v1.4-evaluation-framework.md`. Intended to support **v1.5 — Prompt and Model Optimization** with sharper signals.
+
+- **Categorization**
+  - **`alternatives` in labels + scoring** — `eval_labels` / `generate_samples.py`: optional acceptable categories per ambiguous merchant; eval reports primary vs alternative vs miss (not a single accuracy bit).
+  - **Richer model input** — include **account** (and optionally **source**) in the categorize batch line so Wise vs local bank is not inferred from merchant alone.
+  - **Tighter semantic equivalents** — keep only true synonyms in `test_categorize_eval.py`; remove broad bridges unless product accepts them as equivalent.
+  - **Segment EVAL bait** — exclude or score separately rows meant for duplicate eval (`EVAL BAIT …`) so categorize metrics reflect “real” merchants.
+  - **Merchant category cache policy** — document / revisit when `merchant_categories` upserts run; mitigate wrong first-seen categories sticking forever (product concern, affects production more than eval).
+
+- **Duplicate detection**
+  - **Implementation-tier diagnostics** — log which **code path** linked each pair (fingerprint vs fuzzy amount vs LLM), not only label tier (exact / alias / fuzzy_amount / …). Surfaces whether hard pairs actually exercise non-exact tiers.
+  - **Label coverage** — ensure synthetic data includes explicit **temporal** and **recurring same-merchant different-month** non-duplicates where the spec calls for them.
+  - **Eval stability** — set recall/precision floors from measured baselines; watch per-tier false-positive rates on non-dup bait.
+
+- **Insights eval (stretch)**
+  - Additional **profiles** (e.g. recurring bloat, minimal data) and optional **LLM-as-judge** for numeric faithfulness vs deterministic substring checks.
+
+- **Chat eval (stretch)**
+  - **§4.2 Response faithfulness** — judge compares tool output to final reply; out-of-scope handling assertions beyond tool selection.
+
+- **Cross-cutting**
+  - **Comparison runner** infrastructure overlaps with **v1.5**; keep eval tables as the single source of truth before changing prompts/models.
+
+---
 
 - **Chat message persistence** — Hybrid approach: store messages in a dedicated `chat_messages` table, load a sliding window (~20 messages) into state via `load_context`. Prevents checkpointer bloat from full message history serialization on every ReAct step. Enables searchable chat history and a conversation list sidebar in the UI.
 - **Chat message summarization** — Periodically condense older messages into a summary message to preserve long-range context without growing the token window. Complements the message windowing approach.
