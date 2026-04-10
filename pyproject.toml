@@ -24,7 +24,9 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "pandas>=2.0.0",
     "openpyxl>=3.1.0",
+    "playwright>=1.58.0",
     "pypdf>=3.0.0",
+    "reportlab>=4.0.0",
     "tabulate>=0.9.0",
     "streamlit>=1.28.0",
     "fastapi[standard]>=0.100.0",
@@ -51,6 +53,7 @@ where = ["src"]
 "*" = ["py.typed"]
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 markers = [
     "eval: LLM evaluation tests (require real API keys, slow — run with make eval)",
 ]

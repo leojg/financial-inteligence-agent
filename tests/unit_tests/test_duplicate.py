@@ -1,8 +1,11 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from agents.reconciliator.configuration import DEFAULT_CONFIG
 from agents.reconciliator.nodes import make_detect_duplicates_node
 from shared.models import Transaction
+from shared.repositories.database_repository import DatabaseRepository
 
 
 def _base_state(transactions):
@@ -138,3 +141,147 @@ def test_detect_duplicates_no_duplicates_when_all_distinct(config, state_no_dupl
 
     for t in result["transactions"]:
         assert t.duplicate_of is None
+
+
+def _llm_response(content: str) -> MagicMock:
+    r = MagicMock()
+    r.content = content
+    return r
+
+
+def _two_tx_same_amount_diff_merchant() -> list[Transaction]:
+    """Same date, amount, currency; merchants differ after normalization → merchant-equivalence path."""
+    return [
+        Transaction(
+            id="tx-a",
+            date="2026-01-02",
+            amount_original=-15.0,
+            amount_base=-15.0,
+            currency="USD",
+            merchant="NETFLIX INC",
+            account="Checking",
+            source_file="data/a.xlsx",
+        ),
+        Transaction(
+            id="tx-b",
+            date="2026-01-02",
+            amount_original=-15.0,
+            amount_base=-15.0,
+            currency="USD",
+            merchant="COMPLETELY DIFFERENT STORE",
+            account="Savings",
+            source_file="data/b.xlsx",
+        ),
+    ]
+
+
+@patch.object(DatabaseRepository, "get_duplicate_pair", return_value=None)
+def test_detect_duplicates_normalized_merchant_skips_llm(
+    _mock_cache: MagicMock, config
+):
+    """Equal amount + same normalized merchant → duplicate without invoking ChatOpenAI."""
+    main_llm = MagicMock()
+    merch_llm = MagicMock()
+    with patch(
+        "agents.reconciliator.nodes.ChatOpenAI",
+        side_effect=[main_llm, merch_llm],
+    ):
+        detect = make_detect_duplicates_node(config)
+        state = _base_state(
+            [
+                Transaction(
+                    id="t1",
+                    date="2026-01-02",
+                    amount_original=-20.0,
+                    amount_base=-20.0,
+                    currency="USD",
+                    merchant="Foo!",
+                    account="A",
+                    source_file="x",
+                ),
+                Transaction(
+                    id="t2",
+                    date="2026-01-02",
+                    amount_original=-20.0,
+                    amount_base=-20.0,
+                    currency="USD",
+                    merchant="Foo",
+                    account="B",
+                    source_file="y",
+                ),
+            ]
+        )
+        result = detect(state)
+
+    main_llm.invoke.assert_not_called()
+    merch_llm.invoke.assert_not_called()
+    by_id = {t.id: t for t in result["transactions"]}
+    assert by_id["t2"].duplicate_of == "t1"
+
+
+@patch.object(DatabaseRepository, "get_duplicate_pair", return_value=None)
+def test_detect_duplicates_merchant_equivalence_llm_marks_duplicate(
+    _mock_cache: MagicMock, config
+):
+    """Equal amount, different normalized merchants; model says same_merchant → duplicate."""
+    main_llm = MagicMock()
+    merch_llm = MagicMock()
+    merch_llm.invoke.return_value = _llm_response(
+        '{"same_merchant": true, "confidence": "high", "reason": "bank descriptor alias"}'
+    )
+    with patch(
+        "agents.reconciliator.nodes.ChatOpenAI",
+        side_effect=[main_llm, merch_llm],
+    ):
+        detect = make_detect_duplicates_node(config)
+        result = detect(_base_state(_two_tx_same_amount_diff_merchant()))
+
+    merch_llm.invoke.assert_called_once()
+    main_llm.invoke.assert_not_called()
+    by_id = {t.id: t for t in result["transactions"]}
+    assert by_id["tx-b"].duplicate_of == "tx-a"
+
+
+@patch.object(DatabaseRepository, "get_duplicate_pair", return_value=None)
+def test_detect_duplicates_merchant_equivalence_not_duplicate_high_confidence(
+    _mock_cache: MagicMock, config
+):
+    """Model says not the same merchant with high/medium confidence → no link, no review."""
+    main_llm = MagicMock()
+    merch_llm = MagicMock()
+    merch_llm.invoke.return_value = _llm_response(
+        '{"same_merchant": false, "confidence": "high", "reason": "unrelated stores"}'
+    )
+    with patch(
+        "agents.reconciliator.nodes.ChatOpenAI",
+        side_effect=[main_llm, merch_llm],
+    ):
+        detect = make_detect_duplicates_node(config)
+        result = detect(_base_state(_two_tx_same_amount_diff_merchant()))
+
+    by_id = {t.id: t for t in result["transactions"]}
+    assert by_id["tx-b"].duplicate_of is None
+    assert by_id["tx-b"].needs_review is False
+
+
+@patch.object(DatabaseRepository, "get_duplicate_pair", return_value=None)
+def test_detect_duplicates_merchant_equivalence_low_confidence_needs_review(
+    _mock_cache: MagicMock, config
+):
+    """Model says not duplicate with low confidence → needs_review on the later txn."""
+    main_llm = MagicMock()
+    merch_llm = MagicMock()
+    merch_llm.invoke.return_value = _llm_response(
+        '{"same_merchant": false, "confidence": "low", "reason": "unclear"}'
+    )
+    with patch(
+        "agents.reconciliator.nodes.ChatOpenAI",
+        side_effect=[main_llm, merch_llm],
+    ):
+        detect = make_detect_duplicates_node(config)
+        result = detect(_base_state(_two_tx_same_amount_diff_merchant()))
+
+    by_id = {t.id: t for t in result["transactions"]}
+    assert by_id["tx-b"].duplicate_of is None
+    assert by_id["tx-b"].needs_review is True
+    assert by_id["tx-b"].review_reason

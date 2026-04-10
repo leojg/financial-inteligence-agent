@@ -147,6 +147,75 @@ VISA_TRANSACTIONS = [
 ]
 
 
+def _eval_cross_bank_bait_rows() -> tuple[list[tuple], list[tuple]]:
+    """Itaú vs BROU rows: same date + amount, different merchants (non-dup eval bait)."""
+    itau: list[tuple] = []
+    brou: list[tuple] = []
+    for i in range(15):
+        day = 14 + i
+        d = f"2026-01-{day:02d}"
+        amt = -248.0 - float(i) * 3.0
+        itau.append((d, f"EVAL BAIT SHOP {i:02d}", amt, "UYU", "Shopping"))
+        brou.append((d, f"EVAL BAIT OTHER {i:02d}", amt, "UYU", "Dining"))
+    return itau, brou
+
+
+# Suspicious-activity eval (Itaú): outlier dining, rapid identical charges, round transfer
+SUSPICIOUS_ITAU_ROWS = [
+    ("2026-01-04", "RESTAURANT LA PARRILLA",     -18500.00, "UYU", "Dining"),
+    ("2026-01-04", "EVAL DINE BASELINE 1",       -1500.00,  "UYU", "Dining"),
+    ("2026-01-04", "EVAL DINE BASELINE 2",       -1600.00,  "UYU", "Dining"),
+    ("2026-01-18", "TRANSFERENCIA EVAL ROUND",   -50000.00, "UYU", "Transfer"),
+] + [("2026-01-20", "TIENDA XYZ EVAL RAPID", -800.00, "UYU", "Shopping")] * 5
+
+
+_bait_itau, _bait_brou = _eval_cross_bank_bait_rows()
+ITAU_TRANSACTIONS = ITAU_TRANSACTIONS + SUSPICIOUS_ITAU_ROWS + [
+    ("2026-01-11", "EVAL ALIAS NETFLIX",     -720.00, "UYU", "Entertainment"),
+    ("2026-01-12", "EVAL UBER EATS STAR",    -450.00, "UYU", "Dining"),
+    ("2026-01-13", "EVAL MERCADOLIBRE",      -800.00, "UYU", "Shopping"),
+] + _bait_itau
+
+BROU_TRANSACTIONS = BROU_TRANSACTIONS + _bait_brou
+
+VISA_TRANSACTIONS = VISA_TRANSACTIONS + [
+    ("2026-01-11", "EVAL NF STAR NETFLIX",   -720.00, "UYU", "Entertainment"),
+    ("2026-01-12", "EVAL UBER EATS DN",      -450.00, "UYU", "Dining"),
+    ("2026-01-13", "EVAL MELI MERCADOLIBRE", -792.00, "UYU", "Shopping"),
+]
+
+
+EVAL_ALIAS_DUPLICATE_SPECS: list[dict] = [
+    {
+        "account_a": "Itaú Corriente",
+        "merchant_a": "EVAL ALIAS NETFLIX",
+        "account_b": "VISA Credit",
+        "merchant_b": "EVAL NF STAR NETFLIX",
+        "amount":     -720.0,
+    },
+    {
+        "account_a": "Itaú Corriente",
+        "merchant_a": "EVAL UBER EATS STAR",
+        "account_b": "VISA Credit",
+        "merchant_b": "EVAL UBER EATS DN",
+        "amount":     -450.0,
+    },
+]
+
+EVAL_FUZZY_DUPLICATE_SPECS: list[dict] = [
+    {
+        "account_a": "Itaú Corriente",
+        "merchant_a": "EVAL MERCADOLIBRE",
+        "amount_a":   -800.0,
+        "account_b": "VISA Credit",
+        "merchant_b": "EVAL MELI MERCADOLIBRE",
+        "amount_b":   -792.0,
+    },
+]
+
+TARGET_NON_DUPLICATE_PAIR_COUNT = 30
+
+
 # ── Date-range utilities ─────────────────────────────────────────────────────
 
 def shift_transactions(transactions, start: date, end: date):
@@ -1386,14 +1455,160 @@ def generate_receipts_images(all_transactions: dict, out: str, start: date, end:
 
 # ── Eval labels ──────────────────────────────────────────────────────────────
 
+def _normalization_entries(
+    month: str, accounts: dict[str, list[tuple]]
+) -> list[dict]:
+    """Expected normalized rows per generated artifact (basenames match generate_* outputs)."""
+    entries: list[dict] = []
+    for account_name, basenames_types in (
+        (
+            "Itaú Corriente",
+            (
+                (f"itau_cuenta_corriente_{month}.xlsx", "xlsx"),
+                (f"itau_cuenta_corriente_{month}.png", "image"),
+            ),
+        ),
+        (
+            "BROU Ahorros",
+            (
+                (f"brou_caja_ahorros_{month}.xlsx", "xlsx"),
+                (f"brou_caja_ahorros_{month}.png", "image"),
+            ),
+        ),
+        (
+            "Wise USD",
+            (
+                (f"wise_usd_account_{month}.pdf", "pdf"),
+                (f"wise_usd_account_{month}.png", "image"),
+            ),
+        ),
+        (
+            "VISA Credit",
+            (
+                (f"visa_credit_card_{month}.pdf", "pdf"),
+                (f"visa_credit_card_{month}.png", "image"),
+            ),
+        ),
+    ):
+        txns = accounts[account_name]
+        expected_transactions = [
+            {
+                "date":     d,
+                "merchant": m,
+                "amount":   amount,
+                "currency": currency,
+                "account":  account_name,
+            }
+            for d, m, amount, currency, _cat in txns
+        ]
+        for basename, file_type in basenames_types:
+            entries.append({
+                "source_file":           basename,
+                "file_type":             file_type,
+                "expected_transactions": expected_transactions,
+            })
+    return entries
+
+
+def _eval_txn_pair_key(t_a: dict, t_b: dict) -> tuple:
+    return tuple(sorted([
+        (t_a["date"], t_a["merchant"], t_a["amount"], t_a["account"]),
+        (t_b["date"], t_b["merchant"], t_b["amount"], t_b["account"]),
+    ]))
+
+
+def _eval_find_txn(
+    all_txns: list[dict], account: str, merchant: str, amount: float
+) -> dict | None:
+    for t in all_txns:
+        if (
+            t["account"] == account
+            and t["merchant"] == merchant
+            and abs(float(t["amount"]) - amount) < 0.005
+        ):
+            return t
+    return None
+
+
+def _eval_find_all_txns(
+    all_txns: list[dict], account: str, merchant: str, amount: float
+) -> list[dict]:
+    """All rows matching account/merchant/amount (order preserved; used for rapid-fire)."""
+    return [
+        dict(t)
+        for t in all_txns
+        if (
+            t["account"] == account
+            and t["merchant"] == merchant
+            and abs(float(t["amount"]) - amount) < 0.005
+        )
+    ]
+
+
+def _build_suspicious_labels(all_txns: list[dict]) -> dict[str, list]:
+    """Ground-truth suspicious patterns for eval (Itaú-only synthetic rows)."""
+    acct = "Itaú Corriente"
+
+    def one(merchant: str, amount: float) -> dict | None:
+        t = _eval_find_txn(all_txns, acct, merchant, amount)
+        return dict(t) if t else None
+
+    should_flag: list[dict] = []
+
+    outlier = one("RESTAURANT LA PARRILLA", -18500.0)
+    ctx_a = one("EVAL DINE BASELINE 1", -1500.0)
+    ctx_b = one("EVAL DINE BASELINE 2", -1600.0)
+    if outlier and ctx_a and ctx_b:
+        should_flag.append({
+            "pattern": "outlier_amount",
+            "transactions": [outlier],
+            "context_transactions": [ctx_a, ctx_b],
+            "reason": "Amount is clearly elevated vs same-day dining on this account",
+        })
+
+    rapid = _eval_find_all_txns(all_txns, acct, "TIENDA XYZ EVAL RAPID", -800.0)
+    if len(rapid) >= 5:
+        should_flag.append({
+            "pattern": "rapid_fire",
+            "transactions": rapid[:5],
+            "context_transactions": [],
+            "reason": "Multiple identical charges to the same merchant on the same day",
+        })
+
+    rnd = one("TRANSFERENCIA EVAL ROUND", -50000.0)
+    if rnd:
+        should_flag.append({
+            "pattern": "round_number",
+            "transactions": [rnd],
+            "context_transactions": [],
+            "reason": "Exact round amount on a transfer line",
+        })
+
+    should_not_flag: list[dict] = []
+    for merchant, amount, note in (
+        ("NETFLIX", -720.0, "routine subscription"),
+        ("SUPERMERCADO DISCO", -2840.0, "routine grocery"),
+        ("SALARIO ENERO", 52000.0, "salary income"),
+        ("EVAL ALIAS NETFLIX", -720.0, "eval subscription alias"),
+    ):
+        t = one(merchant, amount)
+        if t:
+            should_not_flag.append({**t, "note": note})
+
+    return {"should_flag": should_flag, "should_not_flag": should_not_flag}
+
+
 def write_eval_labels(out_dir: Path, start: date, end: date) -> None:
-    """Write data/eval_labels.json with categorization and duplicate labels."""
+    """Write data/eval_labels.json (categorization, duplicates, normalization, suspicious)."""
     accounts = {
         "Itaú Corriente": shift_transactions(ITAU_TRANSACTIONS, start, end),
         "BROU Ahorros":   shift_transactions(BROU_TRANSACTIONS, start, end),
         "Wise USD":        shift_transactions(WISE_TRANSACTIONS, start, end),
         "VISA Credit":     shift_transactions(VISA_TRANSACTIONS, start, end),
     }
+
+    month = start.strftime("%B_%Y").lower()
+    normalization = _normalization_entries(month, accounts)
 
     # 1. Categorization labels — one entry per transaction, all accounts
     categorization = []
@@ -1420,10 +1635,21 @@ def write_eval_labels(out_dir: Path, start: date, end: date) -> None:
                 "account":  account,
             })
 
-    # 3. Cross-account pairing: same merchant + same currency, different accounts
+    # 3. Duplicate / non-duplicate pairs (tiers: exact, alias, fuzzy_amount, temporal, bait)
     duplicate_pairs: list[dict] = []
-    non_duplicate_pairs: list[dict] = []
-    seen_keys: set[tuple] = set()
+    seen_dup_keys: set[tuple] = set()
+
+    def _add_dup(t_a: dict, t_b: dict, tier: str) -> None:
+        key = _eval_txn_pair_key(t_a, t_b)
+        if key in seen_dup_keys:
+            return
+        seen_dup_keys.add(key)
+        duplicate_pairs.append({
+            "transaction_a": t_a,
+            "transaction_b": t_b,
+            "is_duplicate":  True,
+            "tier":            tier,
+        })
 
     for i, t_a in enumerate(all_txns):
         for t_b in all_txns[i + 1:]:
@@ -1433,46 +1659,141 @@ def write_eval_labels(out_dir: Path, start: date, end: date) -> None:
                 continue
             if t_a["merchant"] != t_b["merchant"]:
                 continue
-            if t_a["amount"] != t_b["amount"]:
+            if abs(float(t_a["amount"]) - float(t_b["amount"])) >= 0.005:
                 continue
 
-            # Canonical key to avoid emitting the same pair twice
-            key = tuple(sorted([
-                (t_a["date"], t_a["merchant"], t_a["amount"], t_a["account"]),
-                (t_b["date"], t_b["merchant"], t_b["amount"], t_b["account"]),
-            ]))
-            if key in seen_keys:
+            key = _eval_txn_pair_key(t_a, t_b)
+            if key in seen_dup_keys:
                 continue
-            seen_keys.add(key)
 
             days_apart = abs(
                 (date.fromisoformat(t_a["date"]) - date.fromisoformat(t_b["date"])).days
             )
 
             if days_apart <= 3:
+                seen_dup_keys.add(key)
                 duplicate_pairs.append({
                     "transaction_a": t_a,
                     "transaction_b": t_b,
                     "is_duplicate":  True,
-                })
-            elif len(non_duplicate_pairs) < 10:
-                # Same merchant + amount but far apart in time — ambiguous but NOT a dup
-                non_duplicate_pairs.append({
-                    "transaction_a": t_a,
-                    "transaction_b": t_b,
-                    "is_duplicate":  False,
+                    "tier":            "exact",
                 })
 
+    for spec in EVAL_ALIAS_DUPLICATE_SPECS:
+        ta = _eval_find_txn(
+            all_txns, spec["account_a"], spec["merchant_a"], spec["amount"]
+        )
+        tb = _eval_find_txn(
+            all_txns, spec["account_b"], spec["merchant_b"], spec["amount"]
+        )
+        if ta is None or tb is None:
+            continue
+        if ta["date"] != tb["date"]:
+            continue
+        _add_dup(ta, tb, "alias")
+
+    for spec in EVAL_FUZZY_DUPLICATE_SPECS:
+        ta = _eval_find_txn(
+            all_txns, spec["account_a"], spec["merchant_a"], spec["amount_a"]
+        )
+        tb = _eval_find_txn(
+            all_txns, spec["account_b"], spec["merchant_b"], spec["amount_b"]
+        )
+        if ta is None or tb is None:
+            continue
+        if ta["date"] != tb["date"]:
+            continue
+        _add_dup(ta, tb, "fuzzy_amount")
+
+    # Non-dups: false-positive bait (same date/amount, different merchants), then temporal
+    bait_pairs: list[dict] = []
+    seen_nondup_keys: set[tuple] = set()
+
+    for i, t_a in enumerate(all_txns):
+        for t_b in all_txns[i + 1:]:
+            if t_a["account"] == t_b["account"]:
+                continue
+            if t_a["currency"] != t_b["currency"]:
+                continue
+            if t_a["date"] != t_b["date"]:
+                continue
+            if abs(float(t_a["amount"]) - float(t_b["amount"])) >= 0.005:
+                continue
+            if t_a["merchant"] == t_b["merchant"]:
+                continue
+            k = _eval_txn_pair_key(t_a, t_b)
+            if k in seen_nondup_keys:
+                continue
+            seen_nondup_keys.add(k)
+            bait_pairs.append({
+                "transaction_a": t_a,
+                "transaction_b": t_b,
+                "is_duplicate":  False,
+                "tier":            "false_positive_bait",
+            })
+
+    temporal_pairs: list[dict] = []
+    for i, t_a in enumerate(all_txns):
+        for t_b in all_txns[i + 1:]:
+            if t_a["account"] == t_b["account"]:
+                continue
+            if t_a["currency"] != t_b["currency"]:
+                continue
+            if t_a["merchant"] != t_b["merchant"]:
+                continue
+            if abs(float(t_a["amount"]) - float(t_b["amount"])) >= 0.005:
+                continue
+            days_apart = abs(
+                (date.fromisoformat(t_a["date"]) - date.fromisoformat(t_b["date"])).days
+            )
+            if days_apart <= 3:
+                continue
+            k = _eval_txn_pair_key(t_a, t_b)
+            if k in seen_nondup_keys:
+                continue
+            seen_nondup_keys.add(k)
+            temporal_pairs.append({
+                "transaction_a": t_a,
+                "transaction_b": t_b,
+                "is_duplicate":  False,
+                "tier":            "temporal",
+            })
+
+    non_duplicate_pairs: list[dict] = []
+    seen_order: set[tuple] = set()
+    for cand in bait_pairs + temporal_pairs:
+        k = _eval_txn_pair_key(cand["transaction_a"], cand["transaction_b"])
+        if k in seen_order:
+            continue
+        seen_order.add(k)
+        non_duplicate_pairs.append(cand)
+        if len(non_duplicate_pairs) >= TARGET_NON_DUPLICATE_PAIR_COUNT:
+            break
+
+    suspicious = _build_suspicious_labels(all_txns)
+
     labels = {
-        "categorization":     categorization,
-        "duplicate_pairs":    duplicate_pairs,
+        "categorization":      categorization,
+        "duplicate_pairs":     duplicate_pairs,
         "non_duplicate_pairs": non_duplicate_pairs,
+        "normalization":       normalization,
+        "suspicious":          suspicious,
     }
 
     labels_path = out_dir / "eval_labels.json"
     labels_path.write_text(json.dumps(labels, indent=2))
-    logger.info("Eval labels written to %s (%d categorization, %d dup pairs, %d non-dup pairs)",
-                labels_path, len(categorization), len(duplicate_pairs), len(non_duplicate_pairs))
+    n_sf = sum(len(x.get("transactions") or []) for x in suspicious["should_flag"])
+    logger.info(
+        "Eval labels written to %s (%d categorization, %d dup pairs, %d non-dup pairs, "
+        "%d normalization, %d suspicious flag txns, %d should-not-flag)",
+        labels_path,
+        len(categorization),
+        len(duplicate_pairs),
+        len(non_duplicate_pairs),
+        len(normalization),
+        n_sf,
+        len(suspicious["should_not_flag"]),
+    )
 
 
 # ── CLI entry point ──────────────────────────────────────────────────────────

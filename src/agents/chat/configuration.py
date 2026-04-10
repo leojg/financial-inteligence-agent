@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class ChatConfig:
     """Configuration for the chat graph."""
 
-    model_name: str = "gpt-4o"
+    model_name: str = "gpt-5.4"
     temperature: float = 0.2
 
 

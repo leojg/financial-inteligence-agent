@@ -557,6 +557,9 @@ def make_detect_duplicates_node(
 ) -> Callable[[ReconciliationState], dict[str, Any]]:
     """Return a detect_duplicates node; checks duplicate_pairs cache before LLM for fuzzy matches."""
     llm = ChatOpenAI(model=config.model_name, temperature=config.temperature)
+    llm_merchant_equivalence = ChatOpenAI(
+        model=config.merchant_equivalence_model_name, temperature=config.temperature
+    )
 
     def _dates_within(date_a: str, date_b: str, days: int) -> bool:
         d_a = datetime.fromisoformat(date_a)
@@ -569,6 +572,67 @@ def make_detect_duplicates_node(
         if amount_a == 0:
             return False
         return abs(amount_a - amount_b) / abs(amount_a) <= tolerance
+
+    def _merchants_same_normalized(merchant_a: str, merchant_b: str) -> bool:
+        return DatabaseService.normalize_merchant(
+            merchant_a
+        ) == DatabaseService.normalize_merchant(merchant_b)
+
+    def _check_merchant_equivalence_llm(
+        database_service: DatabaseService,
+        t_a: Transaction,
+        t_b: Transaction,
+        fp_a: str,
+        fp_b: str,
+    ) -> tuple[bool, bool, str]:
+        """Same merchant? Uses duplicate_pairs cache, then a small model. Returns (same_merchant, needs_review, reason)."""
+        cached = database_service.get_duplicate_pair(fp_a, fp_b)
+        if cached is not None:
+            logger.debug(
+                "duplicate_pairs cache hit (merchant equivalence): %s / %s",
+                fp_a[:8],
+                fp_b[:8],
+            )
+            return bool(cached["is_duplicate"]), False, str(cached["reason"] or "")
+
+        prompt = f"""
+You compare TWO bank statement merchant descriptors. They may differ in spelling, prefixes (e.g. NF, MELI), punctuation, or abbreviations even when they refer to the SAME business.
+
+Merchant A: {t_a.merchant}
+Merchant B: {t_b.merchant}
+
+Answer: do these describe the same real-world payee or business (one charge), not two unrelated merchants?
+
+Reply ONLY with JSON, no preamble, no markdown:
+{{"same_merchant": true/false, "confidence": "high/medium/low", "reason": "brief reason"}}
+"""
+
+        try:
+            response = llm_merchant_equivalence.invoke(prompt)
+            result = json.loads(_llm_content_str(response.content))
+            same = bool(result.get("same_merchant"))
+            confidence = str(result.get("confidence") or "medium").lower()
+            reason = str(result.get("reason") or "").strip()
+            consolidated = (
+                f"merchant equivalence: {reason}" if reason else "merchant equivalence"
+            )
+
+            database_service.upsert_duplicate_pair(fp_a, fp_b, same, consolidated)
+
+            if same:
+                return True, False, consolidated
+            if confidence == "low":
+                return False, True, consolidated
+            return False, False, consolidated
+
+        except Exception as e:
+            logger.warning(
+                "Merchant equivalence check failed for %s vs %s: %s",
+                t_a.id,
+                t_b.id,
+                e,
+            )
+            return False, True, "Merchant equivalence check failed"
 
     def _check_duplicate_with_llm(
         database_service: DatabaseService,
@@ -639,7 +703,7 @@ def make_detect_duplicates_node(
                     continue
                 if t_b.id in matched_ids:
                     continue
-                if not _dates_within(t_a.date, t_b.date, days=3):
+                if not _dates_within(t_a.date, t_b.date, days=4):
                     continue
 
                 fp_b = database_service.transaction_fingerprint(
@@ -647,13 +711,38 @@ def make_detect_duplicates_node(
                 )
 
                 if t_a.amount_original == t_b.amount_original:
-                    # Exact match — no LLM needed; persist to duplicate_pairs for future runs
-                    database_service.upsert_duplicate_pair(
-                        fp_a, fp_b, True, "exact amount and date match"
-                    )
-                    updated[t_b.id] = t_b.model_copy(update={"duplicate_of": t_a.id})
-                    matched_ids.update([t_a.id, t_b.id])
-                    duplicates.extend([updated[t_a.id], updated[t_b.id]])
+                    if _merchants_same_normalized(t_a.merchant, t_b.merchant):
+                        database_service.upsert_duplicate_pair(
+                            fp_a, fp_b, True, "same normalized merchant"
+                        )
+                        updated[t_b.id] = t_b.model_copy(
+                            update={"duplicate_of": t_a.id}
+                        )
+                        matched_ids.update([t_a.id, t_b.id])
+                        duplicates.extend(
+                            [updated[t_a.id], updated[t_b.id]]
+                        )
+                    else:
+                        same_m, needs_m_rev, m_reason = (
+                            _check_merchant_equivalence_llm(
+                                database_service, t_a, t_b, fp_a, fp_b
+                            )
+                        )
+                        if same_m:
+                            updated[t_b.id] = t_b.model_copy(
+                                update={"duplicate_of": t_a.id}
+                            )
+                            matched_ids.update([t_a.id, t_b.id])
+                            duplicates.extend(
+                                [updated[t_a.id], updated[t_b.id]]
+                            )
+                        elif needs_m_rev:
+                            updated[t_b.id] = t_b.model_copy(
+                                update={
+                                    "needs_review": True,
+                                    "review_reason": m_reason,
+                                }
+                            )
 
                 elif _amounts_fuzzy_match(t_a.amount_original, t_b.amount_original):
                     is_duplicate, needs_review, reason = _check_duplicate_with_llm(

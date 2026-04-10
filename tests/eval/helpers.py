@@ -17,3 +17,12 @@ def make_transaction(entry: dict, txn_id: str | None = None) -> Transaction:
         account=entry["account"],
         source_file=f"data/eval/{entry['account'].replace(' ', '_')}.xlsx",
     )
+
+
+def make_categorized_transaction(entry: dict) -> Transaction:
+    """Like ``make_transaction`` but sets ``category`` from ``expected_category`` (reconciliator eval)."""
+    t = make_transaction(entry)
+    cat = entry.get("expected_category")
+    if cat is not None:
+        t = t.model_copy(update={"category": cat})
+    return t

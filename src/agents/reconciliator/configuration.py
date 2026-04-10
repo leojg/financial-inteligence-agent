@@ -7,7 +7,8 @@ from dataclasses import dataclass
 class ReconciliationConfig:
     """Configuration for the reconciliation graph (LLM, base currency, categories)."""
 
-    model_name: str = "gpt-4o-mini"
+    model_name: str = "gpt-5.4-mini"
+    merchant_equivalence_model_name: str = "gpt-5.4-nano"
     vision_model_name: str = "claude-sonnet-4-6"
     vision_max_tokens: int = 4096
     temperature: float = 0.0

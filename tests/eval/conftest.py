@@ -46,3 +46,13 @@ def duplicate_pairs_labels(eval_labels):
 @pytest.fixture(scope="session")
 def non_duplicate_pairs_labels(eval_labels):
     return eval_labels["non_duplicate_pairs"]
+
+
+@pytest.fixture(scope="session")
+def normalization_labels(eval_labels):
+    return eval_labels.get("normalization") or []
+
+
+@pytest.fixture(scope="session")
+def suspicious_labels(eval_labels):
+    return eval_labels.get("suspicious") or {"should_flag": [], "should_not_flag": []}

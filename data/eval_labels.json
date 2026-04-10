@@ -233,6 +233,222 @@
       "expected_category": "Dining"
     },
     {
+      "date": "2026-01-04",
+      "merchant": "RESTAURANT LA PARRILLA",
+      "amount": -18500.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-04",
+      "merchant": "EVAL DINE BASELINE 1",
+      "amount": -1500.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-04",
+      "merchant": "EVAL DINE BASELINE 2",
+      "amount": -1600.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-18",
+      "merchant": "TRANSFERENCIA EVAL ROUND",
+      "amount": -50000.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Transfer"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "TIENDA XYZ EVAL RAPID",
+      "amount": -800.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "TIENDA XYZ EVAL RAPID",
+      "amount": -800.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "TIENDA XYZ EVAL RAPID",
+      "amount": -800.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "TIENDA XYZ EVAL RAPID",
+      "amount": -800.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "TIENDA XYZ EVAL RAPID",
+      "amount": -800.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-11",
+      "merchant": "EVAL ALIAS NETFLIX",
+      "amount": -720.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Entertainment"
+    },
+    {
+      "date": "2026-01-12",
+      "merchant": "EVAL UBER EATS STAR",
+      "amount": -450.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-13",
+      "merchant": "EVAL MERCADOLIBRE",
+      "amount": -800.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-14",
+      "merchant": "EVAL BAIT SHOP 00",
+      "amount": -248.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-15",
+      "merchant": "EVAL BAIT SHOP 01",
+      "amount": -251.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-16",
+      "merchant": "EVAL BAIT SHOP 02",
+      "amount": -254.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-17",
+      "merchant": "EVAL BAIT SHOP 03",
+      "amount": -257.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-18",
+      "merchant": "EVAL BAIT SHOP 04",
+      "amount": -260.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-19",
+      "merchant": "EVAL BAIT SHOP 05",
+      "amount": -263.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "EVAL BAIT SHOP 06",
+      "amount": -266.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-21",
+      "merchant": "EVAL BAIT SHOP 07",
+      "amount": -269.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-22",
+      "merchant": "EVAL BAIT SHOP 08",
+      "amount": -272.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-23",
+      "merchant": "EVAL BAIT SHOP 09",
+      "amount": -275.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-24",
+      "merchant": "EVAL BAIT SHOP 10",
+      "amount": -278.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-25",
+      "merchant": "EVAL BAIT SHOP 11",
+      "amount": -281.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-26",
+      "merchant": "EVAL BAIT SHOP 12",
+      "amount": -284.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-27",
+      "merchant": "EVAL BAIT SHOP 13",
+      "amount": -287.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
+      "date": "2026-01-28",
+      "merchant": "EVAL BAIT SHOP 14",
+      "amount": -290.0,
+      "currency": "UYU",
+      "account": "Ita\u00fa Corriente",
+      "expected_category": "Shopping"
+    },
+    {
       "date": "2026-01-01",
       "merchant": "SALDO ANTERIOR",
       "amount": 15000.0,
@@ -399,6 +615,126 @@
       "currency": "UYU",
       "account": "BROU Ahorros",
       "expected_category": "Other"
+    },
+    {
+      "date": "2026-01-14",
+      "merchant": "EVAL BAIT OTHER 00",
+      "amount": -248.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-15",
+      "merchant": "EVAL BAIT OTHER 01",
+      "amount": -251.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-16",
+      "merchant": "EVAL BAIT OTHER 02",
+      "amount": -254.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-17",
+      "merchant": "EVAL BAIT OTHER 03",
+      "amount": -257.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-18",
+      "merchant": "EVAL BAIT OTHER 04",
+      "amount": -260.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-19",
+      "merchant": "EVAL BAIT OTHER 05",
+      "amount": -263.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-20",
+      "merchant": "EVAL BAIT OTHER 06",
+      "amount": -266.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-21",
+      "merchant": "EVAL BAIT OTHER 07",
+      "amount": -269.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-22",
+      "merchant": "EVAL BAIT OTHER 08",
+      "amount": -272.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-23",
+      "merchant": "EVAL BAIT OTHER 09",
+      "amount": -275.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-24",
+      "merchant": "EVAL BAIT OTHER 10",
+      "amount": -278.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-25",
+      "merchant": "EVAL BAIT OTHER 11",
+      "amount": -281.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-26",
+      "merchant": "EVAL BAIT OTHER 12",
+      "amount": -284.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-27",
+      "merchant": "EVAL BAIT OTHER 13",
+      "amount": -287.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-28",
+      "merchant": "EVAL BAIT OTHER 14",
+      "amount": -290.0,
+      "currency": "UYU",
+      "account": "BROU Ahorros",
+      "expected_category": "Dining"
     },
     {
       "date": "2026-01-02",
@@ -791,6 +1127,30 @@
       "currency": "UYU",
       "account": "VISA Credit",
       "expected_category": "Fees & Charges"
+    },
+    {
+      "date": "2026-01-11",
+      "merchant": "EVAL NF STAR NETFLIX",
+      "amount": -720.0,
+      "currency": "UYU",
+      "account": "VISA Credit",
+      "expected_category": "Entertainment"
+    },
+    {
+      "date": "2026-01-12",
+      "merchant": "EVAL UBER EATS DN",
+      "amount": -450.0,
+      "currency": "UYU",
+      "account": "VISA Credit",
+      "expected_category": "Dining"
+    },
+    {
+      "date": "2026-01-13",
+      "merchant": "EVAL MELI MERCADOLIBRE",
+      "amount": -792.0,
+      "currency": "UYU",
+      "account": "VISA Credit",
+      "expected_category": "Shopping"
     }
   ],
   "duplicate_pairs": [
@@ -809,7 +1169,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -826,7 +1187,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -843,7 +1205,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -860,7 +1223,8 @@
         "currency": "UYU",
         "account": "BROU Ahorros"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -877,7 +1241,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -894,7 +1259,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -911,7 +1277,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
     },
     {
       "transaction_a": {
@@ -928,10 +1295,389 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": true
+      "is_duplicate": true,
+      "tier": "exact"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-11",
+        "merchant": "EVAL ALIAS NETFLIX",
+        "amount": -720.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-11",
+        "merchant": "EVAL NF STAR NETFLIX",
+        "amount": -720.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": true,
+      "tier": "alias"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-12",
+        "merchant": "EVAL UBER EATS STAR",
+        "amount": -450.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-12",
+        "merchant": "EVAL UBER EATS DN",
+        "amount": -450.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": true,
+      "tier": "alias"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-13",
+        "merchant": "EVAL MERCADOLIBRE",
+        "amount": -800.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-13",
+        "merchant": "EVAL MELI MERCADOLIBRE",
+        "amount": -792.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": true,
+      "tier": "fuzzy_amount"
     }
   ],
   "non_duplicate_pairs": [
+    {
+      "transaction_a": {
+        "date": "2026-01-21",
+        "merchant": "RESTAURANT EL PALENQUE",
+        "amount": -2100.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-21",
+        "merchant": "SUPERMERCADO DISCO",
+        "amount": -2100.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-11",
+        "merchant": "EVAL ALIAS NETFLIX",
+        "amount": -720.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-11",
+        "merchant": "EVAL NF STAR NETFLIX",
+        "amount": -720.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-12",
+        "merchant": "EVAL UBER EATS STAR",
+        "amount": -450.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-12",
+        "merchant": "EVAL UBER EATS DN",
+        "amount": -450.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-14",
+        "merchant": "EVAL BAIT SHOP 00",
+        "amount": -248.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-14",
+        "merchant": "EVAL BAIT OTHER 00",
+        "amount": -248.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-15",
+        "merchant": "EVAL BAIT SHOP 01",
+        "amount": -251.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-15",
+        "merchant": "EVAL BAIT OTHER 01",
+        "amount": -251.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-16",
+        "merchant": "EVAL BAIT SHOP 02",
+        "amount": -254.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-16",
+        "merchant": "EVAL BAIT OTHER 02",
+        "amount": -254.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-17",
+        "merchant": "EVAL BAIT SHOP 03",
+        "amount": -257.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-17",
+        "merchant": "EVAL BAIT OTHER 03",
+        "amount": -257.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-18",
+        "merchant": "EVAL BAIT SHOP 04",
+        "amount": -260.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-18",
+        "merchant": "EVAL BAIT OTHER 04",
+        "amount": -260.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-19",
+        "merchant": "EVAL BAIT SHOP 05",
+        "amount": -263.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-19",
+        "merchant": "EVAL BAIT OTHER 05",
+        "amount": -263.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-20",
+        "merchant": "EVAL BAIT SHOP 06",
+        "amount": -266.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-20",
+        "merchant": "EVAL BAIT OTHER 06",
+        "amount": -266.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-21",
+        "merchant": "EVAL BAIT SHOP 07",
+        "amount": -269.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-21",
+        "merchant": "EVAL BAIT OTHER 07",
+        "amount": -269.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-22",
+        "merchant": "EVAL BAIT SHOP 08",
+        "amount": -272.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-22",
+        "merchant": "EVAL BAIT OTHER 08",
+        "amount": -272.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-23",
+        "merchant": "EVAL BAIT SHOP 09",
+        "amount": -275.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-23",
+        "merchant": "EVAL BAIT OTHER 09",
+        "amount": -275.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-24",
+        "merchant": "EVAL BAIT SHOP 10",
+        "amount": -278.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-24",
+        "merchant": "EVAL BAIT OTHER 10",
+        "amount": -278.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-25",
+        "merchant": "EVAL BAIT SHOP 11",
+        "amount": -281.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-25",
+        "merchant": "EVAL BAIT OTHER 11",
+        "amount": -281.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-26",
+        "merchant": "EVAL BAIT SHOP 12",
+        "amount": -284.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-26",
+        "merchant": "EVAL BAIT OTHER 12",
+        "amount": -284.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-27",
+        "merchant": "EVAL BAIT SHOP 13",
+        "amount": -287.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-27",
+        "merchant": "EVAL BAIT OTHER 13",
+        "amount": -287.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-28",
+        "merchant": "EVAL BAIT SHOP 14",
+        "amount": -290.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-28",
+        "merchant": "EVAL BAIT OTHER 14",
+        "amount": -290.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "is_duplicate": false,
+      "tier": "false_positive_bait"
+    },
     {
       "transaction_a": {
         "date": "2026-01-03",
@@ -947,7 +1693,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -964,7 +1711,8 @@
         "currency": "UYU",
         "account": "BROU Ahorros"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -981,7 +1729,8 @@
         "currency": "UYU",
         "account": "BROU Ahorros"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -998,7 +1747,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -1015,7 +1765,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -1032,7 +1783,8 @@
         "currency": "UYU",
         "account": "BROU Ahorros"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -1049,7 +1801,8 @@
         "currency": "UYU",
         "account": "BROU Ahorros"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -1066,7 +1819,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -1083,7 +1837,8 @@
         "currency": "UYU",
         "account": "VISA Credit"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
     },
     {
       "transaction_a": {
@@ -1100,7 +1855,2233 @@
         "currency": "UYU",
         "account": "BROU Ahorros"
       },
-      "is_duplicate": false
+      "is_duplicate": false,
+      "tier": "temporal"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-30",
+        "merchant": "YPF COMBUSTIBLES",
+        "amount": -1800.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente"
+      },
+      "transaction_b": {
+        "date": "2026-01-17",
+        "merchant": "YPF COMBUSTIBLES",
+        "amount": -1800.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": false,
+      "tier": "temporal"
+    },
+    {
+      "transaction_a": {
+        "date": "2026-01-14",
+        "merchant": "FARMACIA DEL PUEBLO",
+        "amount": -420.0,
+        "currency": "UYU",
+        "account": "BROU Ahorros"
+      },
+      "transaction_b": {
+        "date": "2026-01-06",
+        "merchant": "FARMACIA DEL PUEBLO",
+        "amount": -420.0,
+        "currency": "UYU",
+        "account": "VISA Credit"
+      },
+      "is_duplicate": false,
+      "tier": "temporal"
     }
-  ]
+  ],
+  "normalization": [
+    {
+      "source_file": "itau_cuenta_corriente_january_2026.xlsx",
+      "file_type": "xlsx",
+      "expected_transactions": [
+        {
+          "date": "2026-01-02",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -2840.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-03",
+          "merchant": "ANTEL TELEFONIA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -3120.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-07",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-08",
+          "merchant": "NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-09",
+          "merchant": "UBER",
+          "amount": -380.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "RESTAURANT LA PASCUALA",
+          "amount": -1560.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -1950.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "OSE AGUA",
+          "amount": -310.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "UTE ELECTRICIDAD",
+          "amount": -1240.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "SALARIO ENERO",
+          "amount": 52000.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -580.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "GIMNASIO SMART FIT",
+          "amount": -990.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -2340.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "RAPPI DELIVERY",
+          "amount": -640.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "LIBRERIA PAPELERIA DON",
+          "amount": -450.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "RESTAURANT EL PALENQUE",
+          "amount": -2100.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "TRANSFER TO BROU",
+          "amount": -8000.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -1780.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "SPOTIFY",
+          "amount": -360.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "UBER",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "FARMACIA URUGUAYA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -2680.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "CINE LIFE ALFAVILLE",
+          "amount": -780.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-29",
+          "merchant": "RESTAURANT LA CIGALE",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "RAPPI DELIVERY",
+          "amount": -520.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "RESTAURANT LA PARRILLA",
+          "amount": -18500.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "EVAL DINE BASELINE 1",
+          "amount": -1500.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "EVAL DINE BASELINE 2",
+          "amount": -1600.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "TRANSFERENCIA EVAL ROUND",
+          "amount": -50000.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-11",
+          "merchant": "EVAL ALIAS NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "EVAL UBER EATS STAR",
+          "amount": -450.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "EVAL MERCADOLIBRE",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "EVAL BAIT SHOP 00",
+          "amount": -248.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "EVAL BAIT SHOP 01",
+          "amount": -251.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "EVAL BAIT SHOP 02",
+          "amount": -254.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "EVAL BAIT SHOP 03",
+          "amount": -257.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "EVAL BAIT SHOP 04",
+          "amount": -260.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "EVAL BAIT SHOP 05",
+          "amount": -263.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "EVAL BAIT SHOP 06",
+          "amount": -266.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "EVAL BAIT SHOP 07",
+          "amount": -269.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "EVAL BAIT SHOP 08",
+          "amount": -272.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "EVAL BAIT SHOP 09",
+          "amount": -275.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "EVAL BAIT SHOP 10",
+          "amount": -278.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "EVAL BAIT SHOP 11",
+          "amount": -281.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "EVAL BAIT SHOP 12",
+          "amount": -284.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "EVAL BAIT SHOP 13",
+          "amount": -287.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "EVAL BAIT SHOP 14",
+          "amount": -290.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        }
+      ]
+    },
+    {
+      "source_file": "itau_cuenta_corriente_january_2026.png",
+      "file_type": "image",
+      "expected_transactions": [
+        {
+          "date": "2026-01-02",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -2840.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-03",
+          "merchant": "ANTEL TELEFONIA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -3120.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-07",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-08",
+          "merchant": "NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-09",
+          "merchant": "UBER",
+          "amount": -380.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "RESTAURANT LA PASCUALA",
+          "amount": -1560.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -1950.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "OSE AGUA",
+          "amount": -310.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "UTE ELECTRICIDAD",
+          "amount": -1240.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "SALARIO ENERO",
+          "amount": 52000.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -580.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "GIMNASIO SMART FIT",
+          "amount": -990.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -2340.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "RAPPI DELIVERY",
+          "amount": -640.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "LIBRERIA PAPELERIA DON",
+          "amount": -450.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "RESTAURANT EL PALENQUE",
+          "amount": -2100.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "TRANSFER TO BROU",
+          "amount": -8000.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -1780.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "SPOTIFY",
+          "amount": -360.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "UBER",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "FARMACIA URUGUAYA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -2680.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "CINE LIFE ALFAVILLE",
+          "amount": -780.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-29",
+          "merchant": "RESTAURANT LA CIGALE",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "RAPPI DELIVERY",
+          "amount": -520.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "RESTAURANT LA PARRILLA",
+          "amount": -18500.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "EVAL DINE BASELINE 1",
+          "amount": -1500.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "EVAL DINE BASELINE 2",
+          "amount": -1600.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "TRANSFERENCIA EVAL ROUND",
+          "amount": -50000.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "TIENDA XYZ EVAL RAPID",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-11",
+          "merchant": "EVAL ALIAS NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "EVAL UBER EATS STAR",
+          "amount": -450.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "EVAL MERCADOLIBRE",
+          "amount": -800.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "EVAL BAIT SHOP 00",
+          "amount": -248.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "EVAL BAIT SHOP 01",
+          "amount": -251.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "EVAL BAIT SHOP 02",
+          "amount": -254.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "EVAL BAIT SHOP 03",
+          "amount": -257.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "EVAL BAIT SHOP 04",
+          "amount": -260.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "EVAL BAIT SHOP 05",
+          "amount": -263.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "EVAL BAIT SHOP 06",
+          "amount": -266.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "EVAL BAIT SHOP 07",
+          "amount": -269.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "EVAL BAIT SHOP 08",
+          "amount": -272.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "EVAL BAIT SHOP 09",
+          "amount": -275.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "EVAL BAIT SHOP 10",
+          "amount": -278.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "EVAL BAIT SHOP 11",
+          "amount": -281.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "EVAL BAIT SHOP 12",
+          "amount": -284.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "EVAL BAIT SHOP 13",
+          "amount": -287.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "EVAL BAIT SHOP 14",
+          "amount": -290.0,
+          "currency": "UYU",
+          "account": "Ita\u00fa Corriente"
+        }
+      ]
+    },
+    {
+      "source_file": "brou_caja_ahorros_january_2026.xlsx",
+      "file_type": "xlsx",
+      "expected_transactions": [
+        {
+          "date": "2026-01-01",
+          "merchant": "SALDO ANTERIOR",
+          "amount": 15000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-03",
+          "merchant": "PAGO ALQUILER",
+          "amount": -18500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "TRANSFER FROM ITAU",
+          "amount": 8000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -1950.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-08",
+          "merchant": "ABITAB PAGO SERVICIOS",
+          "amount": -1200.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -3000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "COBRO FREELANCE WEB",
+          "amount": 9500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "PAGO TARJETA CREDITO",
+          "amount": -6500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -2000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "ANTEL FIBRA OPTICA",
+          "amount": -650.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -2100.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "COBRO FREELANCE APP",
+          "amount": 7200.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -2500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "RESTAURANT LA PASCUALA",
+          "amount": -1560.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "ABITAB PAGO DGI",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -1890.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-29",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -2000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "PAGO MUTUAL MEDICA",
+          "amount": -1100.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "SALDO FINAL",
+          "amount": 0.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "EVAL BAIT OTHER 00",
+          "amount": -248.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "EVAL BAIT OTHER 01",
+          "amount": -251.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "EVAL BAIT OTHER 02",
+          "amount": -254.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "EVAL BAIT OTHER 03",
+          "amount": -257.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "EVAL BAIT OTHER 04",
+          "amount": -260.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "EVAL BAIT OTHER 05",
+          "amount": -263.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "EVAL BAIT OTHER 06",
+          "amount": -266.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "EVAL BAIT OTHER 07",
+          "amount": -269.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "EVAL BAIT OTHER 08",
+          "amount": -272.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "EVAL BAIT OTHER 09",
+          "amount": -275.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "EVAL BAIT OTHER 10",
+          "amount": -278.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "EVAL BAIT OTHER 11",
+          "amount": -281.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "EVAL BAIT OTHER 12",
+          "amount": -284.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "EVAL BAIT OTHER 13",
+          "amount": -287.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "EVAL BAIT OTHER 14",
+          "amount": -290.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        }
+      ]
+    },
+    {
+      "source_file": "brou_caja_ahorros_january_2026.png",
+      "file_type": "image",
+      "expected_transactions": [
+        {
+          "date": "2026-01-01",
+          "merchant": "SALDO ANTERIOR",
+          "amount": 15000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-03",
+          "merchant": "PAGO ALQUILER",
+          "amount": -18500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "TRANSFER FROM ITAU",
+          "amount": 8000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -1950.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-08",
+          "merchant": "ABITAB PAGO SERVICIOS",
+          "amount": -1200.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -3000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "COBRO FREELANCE WEB",
+          "amount": 9500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "PAGO TARJETA CREDITO",
+          "amount": -6500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -2000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "ANTEL FIBRA OPTICA",
+          "amount": -650.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -2100.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "COBRO FREELANCE APP",
+          "amount": 7200.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -2500.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "RESTAURANT LA PASCUALA",
+          "amount": -1560.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "ABITAB PAGO DGI",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -1890.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-29",
+          "merchant": "RETIRO CAJERO ATM",
+          "amount": -2000.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "PAGO MUTUAL MEDICA",
+          "amount": -1100.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "SALDO FINAL",
+          "amount": 0.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "EVAL BAIT OTHER 00",
+          "amount": -248.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "EVAL BAIT OTHER 01",
+          "amount": -251.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "EVAL BAIT OTHER 02",
+          "amount": -254.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "EVAL BAIT OTHER 03",
+          "amount": -257.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "EVAL BAIT OTHER 04",
+          "amount": -260.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "EVAL BAIT OTHER 05",
+          "amount": -263.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "EVAL BAIT OTHER 06",
+          "amount": -266.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "EVAL BAIT OTHER 07",
+          "amount": -269.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "EVAL BAIT OTHER 08",
+          "amount": -272.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "EVAL BAIT OTHER 09",
+          "amount": -275.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "EVAL BAIT OTHER 10",
+          "amount": -278.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "EVAL BAIT OTHER 11",
+          "amount": -281.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "EVAL BAIT OTHER 12",
+          "amount": -284.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "EVAL BAIT OTHER 13",
+          "amount": -287.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "EVAL BAIT OTHER 14",
+          "amount": -290.0,
+          "currency": "UYU",
+          "account": "BROU Ahorros"
+        }
+      ]
+    },
+    {
+      "source_file": "wise_usd_account_january_2026.pdf",
+      "file_type": "pdf",
+      "expected_transactions": [
+        {
+          "date": "2026-01-02",
+          "merchant": "GITHUB COPILOT",
+          "amount": -10.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-03",
+          "merchant": "DIGITAL OCEAN DROPLET",
+          "amount": -24.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "REMOTE JOB PAYMENT JAN",
+          "amount": 1800.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "ADOBE CREATIVE CLOUD",
+          "amount": -54.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-07",
+          "merchant": "NAMECHEAP DOMAIN",
+          "amount": -15.88,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-08",
+          "merchant": "CHATGPT PLUS",
+          "amount": -20.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "AMAZON WEB SERVICES",
+          "amount": -38.42,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "UDEMY COURSE PURCHASE",
+          "amount": -29.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "FIGMA PROFESSIONAL",
+          "amount": -15.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "TRANSFER TO LOCAL BANK",
+          "amount": -500.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "NOTION TEAM PLAN",
+          "amount": -16.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "DIGITAL OCEAN DROPLET",
+          "amount": -24.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "UPWORK FREELANCE INCOME",
+          "amount": 620.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "GITHUB COPILOT",
+          "amount": -10.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "ANTHROPIC API USAGE",
+          "amount": -42.8,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "ZOOM SUBSCRIPTION",
+          "amount": -15.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "AMAZON WEB SERVICES",
+          "amount": -41.17,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "1PASSWORD FAMILY",
+          "amount": -4.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "UPWORK FREELANCE INCOME",
+          "amount": 480.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "ANTHROPIC API USAGE",
+          "amount": -189.4,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "TAILSCALE VPN",
+          "amount": -18.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "DIGITAL OCEAN DROPLET",
+          "amount": -24.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "GITHUB COPILOT",
+          "amount": -10.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        }
+      ]
+    },
+    {
+      "source_file": "wise_usd_account_january_2026.png",
+      "file_type": "image",
+      "expected_transactions": [
+        {
+          "date": "2026-01-02",
+          "merchant": "GITHUB COPILOT",
+          "amount": -10.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-03",
+          "merchant": "DIGITAL OCEAN DROPLET",
+          "amount": -24.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "REMOTE JOB PAYMENT JAN",
+          "amount": 1800.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "ADOBE CREATIVE CLOUD",
+          "amount": -54.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-07",
+          "merchant": "NAMECHEAP DOMAIN",
+          "amount": -15.88,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-08",
+          "merchant": "CHATGPT PLUS",
+          "amount": -20.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "AMAZON WEB SERVICES",
+          "amount": -38.42,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "UDEMY COURSE PURCHASE",
+          "amount": -29.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "FIGMA PROFESSIONAL",
+          "amount": -15.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "TRANSFER TO LOCAL BANK",
+          "amount": -500.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "NOTION TEAM PLAN",
+          "amount": -16.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "DIGITAL OCEAN DROPLET",
+          "amount": -24.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "UPWORK FREELANCE INCOME",
+          "amount": 620.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "GITHUB COPILOT",
+          "amount": -10.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "ANTHROPIC API USAGE",
+          "amount": -42.8,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "ZOOM SUBSCRIPTION",
+          "amount": -15.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "AMAZON WEB SERVICES",
+          "amount": -41.17,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "1PASSWORD FAMILY",
+          "amount": -4.99,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "UPWORK FREELANCE INCOME",
+          "amount": 480.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-27",
+          "merchant": "ANTHROPIC API USAGE",
+          "amount": -189.4,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "TAILSCALE VPN",
+          "amount": -18.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "DIGITAL OCEAN DROPLET",
+          "amount": -24.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "GITHUB COPILOT",
+          "amount": -10.0,
+          "currency": "USD",
+          "account": "Wise USD"
+        }
+      ]
+    },
+    {
+      "source_file": "visa_credit_card_january_2026.pdf",
+      "file_type": "pdf",
+      "expected_transactions": [
+        {
+          "date": "2026-01-03",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "RESTAURANT PANORAMICO",
+          "amount": -4800.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "ZARA PUNTA CARRETAS",
+          "amount": -5600.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-07",
+          "merchant": "SPOTIFY",
+          "amount": -360.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-09",
+          "merchant": "APPLE STORE",
+          "amount": -12800.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "UBER",
+          "amount": -380.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-11",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -2890.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "RESTAURANT DON PEPERONE",
+          "amount": -1980.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "DECATHLON MONTEVIDEO",
+          "amount": -3400.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "HOTEL COTTAGE COLONIA",
+          "amount": -8900.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -2640.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "LIBRERIAS EL CLUB",
+          "amount": -780.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "RAPPI DELIVERY",
+          "amount": -640.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "CINES LIFE ALFAVILLE",
+          "amount": -780.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "GIMNASIO SMART FIT",
+          "amount": -990.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "RESTAURANT LA TABLA",
+          "amount": -2200.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "FARMACIA URUGUAYA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "IKEA ONLINE",
+          "amount": -6700.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "UBER",
+          "amount": -460.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -3100.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-29",
+          "merchant": "ANTEL TELEFONIA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "RESTAURANT LA CIGALE",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "PAGO MINIMO VISA",
+          "amount": -5000.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-11",
+          "merchant": "EVAL NF STAR NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "EVAL UBER EATS DN",
+          "amount": -450.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "EVAL MELI MERCADOLIBRE",
+          "amount": -792.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        }
+      ]
+    },
+    {
+      "source_file": "visa_credit_card_january_2026.png",
+      "file_type": "image",
+      "expected_transactions": [
+        {
+          "date": "2026-01-03",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-04",
+          "merchant": "RESTAURANT PANORAMICO",
+          "amount": -4800.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-05",
+          "merchant": "ZARA PUNTA CARRETAS",
+          "amount": -5600.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-06",
+          "merchant": "FARMACIA DEL PUEBLO",
+          "amount": -420.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-07",
+          "merchant": "SPOTIFY",
+          "amount": -360.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-09",
+          "merchant": "APPLE STORE",
+          "amount": -12800.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-10",
+          "merchant": "UBER",
+          "amount": -380.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-11",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -2890.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "RESTAURANT DON PEPERONE",
+          "amount": -1980.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-14",
+          "merchant": "DECATHLON MONTEVIDEO",
+          "amount": -3400.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-15",
+          "merchant": "NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-16",
+          "merchant": "HOTEL COTTAGE COLONIA",
+          "amount": -8900.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-17",
+          "merchant": "YPF COMBUSTIBLES",
+          "amount": -1800.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-18",
+          "merchant": "SUPERMERCADO DISCO",
+          "amount": -2640.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-19",
+          "merchant": "LIBRERIAS EL CLUB",
+          "amount": -780.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-20",
+          "merchant": "RAPPI DELIVERY",
+          "amount": -640.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-21",
+          "merchant": "CINES LIFE ALFAVILLE",
+          "amount": -780.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-22",
+          "merchant": "GIMNASIO SMART FIT",
+          "amount": -990.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-23",
+          "merchant": "RESTAURANT LA TABLA",
+          "amount": -2200.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-24",
+          "merchant": "FARMACIA URUGUAYA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-25",
+          "merchant": "IKEA ONLINE",
+          "amount": -6700.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-26",
+          "merchant": "UBER",
+          "amount": -460.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-28",
+          "merchant": "SUPERMERCADO TIENDA INGLESA",
+          "amount": -3100.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-29",
+          "merchant": "ANTEL TELEFONIA",
+          "amount": -890.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-30",
+          "merchant": "RESTAURANT LA CIGALE",
+          "amount": -3200.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-31",
+          "merchant": "PAGO MINIMO VISA",
+          "amount": -5000.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-11",
+          "merchant": "EVAL NF STAR NETFLIX",
+          "amount": -720.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-12",
+          "merchant": "EVAL UBER EATS DN",
+          "amount": -450.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        },
+        {
+          "date": "2026-01-13",
+          "merchant": "EVAL MELI MERCADOLIBRE",
+          "amount": -792.0,
+          "currency": "UYU",
+          "account": "VISA Credit"
+        }
+      ]
+    }
+  ],
+  "suspicious": {
+    "should_flag": [
+      {
+        "pattern": "outlier_amount",
+        "transactions": [
+          {
+            "date": "2026-01-04",
+            "merchant": "RESTAURANT LA PARRILLA",
+            "amount": -18500.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          }
+        ],
+        "context_transactions": [
+          {
+            "date": "2026-01-04",
+            "merchant": "EVAL DINE BASELINE 1",
+            "amount": -1500.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          },
+          {
+            "date": "2026-01-04",
+            "merchant": "EVAL DINE BASELINE 2",
+            "amount": -1600.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          }
+        ],
+        "reason": "Amount is clearly elevated vs same-day dining on this account"
+      },
+      {
+        "pattern": "rapid_fire",
+        "transactions": [
+          {
+            "date": "2026-01-20",
+            "merchant": "TIENDA XYZ EVAL RAPID",
+            "amount": -800.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          },
+          {
+            "date": "2026-01-20",
+            "merchant": "TIENDA XYZ EVAL RAPID",
+            "amount": -800.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          },
+          {
+            "date": "2026-01-20",
+            "merchant": "TIENDA XYZ EVAL RAPID",
+            "amount": -800.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          },
+          {
+            "date": "2026-01-20",
+            "merchant": "TIENDA XYZ EVAL RAPID",
+            "amount": -800.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          },
+          {
+            "date": "2026-01-20",
+            "merchant": "TIENDA XYZ EVAL RAPID",
+            "amount": -800.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          }
+        ],
+        "context_transactions": [],
+        "reason": "Multiple identical charges to the same merchant on the same day"
+      },
+      {
+        "pattern": "round_number",
+        "transactions": [
+          {
+            "date": "2026-01-18",
+            "merchant": "TRANSFERENCIA EVAL ROUND",
+            "amount": -50000.0,
+            "currency": "UYU",
+            "account": "Ita\u00fa Corriente"
+          }
+        ],
+        "context_transactions": [],
+        "reason": "Exact round amount on a transfer line"
+      }
+    ],
+    "should_not_flag": [
+      {
+        "date": "2026-01-08",
+        "merchant": "NETFLIX",
+        "amount": -720.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente",
+        "note": "routine subscription"
+      },
+      {
+        "date": "2026-01-02",
+        "merchant": "SUPERMERCADO DISCO",
+        "amount": -2840.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente",
+        "note": "routine grocery"
+      },
+      {
+        "date": "2026-01-15",
+        "merchant": "SALARIO ENERO",
+        "amount": 52000.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente",
+        "note": "salary income"
+      },
+      {
+        "date": "2026-01-11",
+        "merchant": "EVAL ALIAS NETFLIX",
+        "amount": -720.0,
+        "currency": "UYU",
+        "account": "Ita\u00fa Corriente",
+        "note": "eval subscription alias"
+      }
+    ]
+  }
 }
