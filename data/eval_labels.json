@@ -46,7 +46,7 @@
       "amount": -720.0,
       "currency": "UYU",
       "account": "Ita\u00fa Corriente",
-      "expected_category": "Entertainment"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-09",
@@ -174,7 +174,7 @@
       "amount": -360.0,
       "currency": "UYU",
       "account": "Ita\u00fa Corriente",
-      "expected_category": "Entertainment"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-25",
@@ -310,7 +310,7 @@
       "amount": -720.0,
       "currency": "UYU",
       "account": "Ita\u00fa Corriente",
-      "expected_category": "Entertainment"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-12",
@@ -494,7 +494,7 @@
       "amount": -3000.0,
       "currency": "UYU",
       "account": "BROU Ahorros",
-      "expected_category": "Other"
+      "expected_category": "Withdrawals"
     },
     {
       "date": "2026-01-12",
@@ -526,7 +526,7 @@
       "amount": -2000.0,
       "currency": "UYU",
       "account": "BROU Ahorros",
-      "expected_category": "Other"
+      "expected_category": "Withdrawals"
     },
     {
       "date": "2026-01-19",
@@ -566,7 +566,7 @@
       "amount": -2500.0,
       "currency": "UYU",
       "account": "BROU Ahorros",
-      "expected_category": "Other"
+      "expected_category": "Withdrawals"
     },
     {
       "date": "2026-01-25",
@@ -598,7 +598,7 @@
       "amount": -2000.0,
       "currency": "UYU",
       "account": "BROU Ahorros",
-      "expected_category": "Other"
+      "expected_category": "Withdrawals"
     },
     {
       "date": "2026-01-30",
@@ -742,7 +742,7 @@
       "amount": -10.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-03",
@@ -750,7 +750,7 @@
       "amount": -24.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-05",
@@ -766,7 +766,7 @@
       "amount": -54.99,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-07",
@@ -774,7 +774,7 @@
       "amount": -15.88,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-08",
@@ -782,7 +782,7 @@
       "amount": -20.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-10",
@@ -790,7 +790,7 @@
       "amount": -38.42,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-12",
@@ -806,7 +806,7 @@
       "amount": -15.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-15",
@@ -822,7 +822,7 @@
       "amount": -16.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-17",
@@ -830,7 +830,7 @@
       "amount": -24.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-18",
@@ -846,7 +846,7 @@
       "amount": -10.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-21",
@@ -854,7 +854,7 @@
       "amount": -42.8,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-22",
@@ -862,7 +862,7 @@
       "amount": -15.99,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-23",
@@ -870,7 +870,7 @@
       "amount": -41.17,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-24",
@@ -878,7 +878,7 @@
       "amount": -4.99,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-25",
@@ -894,7 +894,7 @@
       "amount": -189.4,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-28",
@@ -902,7 +902,7 @@
       "amount": -18.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-30",
@@ -910,7 +910,7 @@
       "amount": -24.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-31",
@@ -918,7 +918,7 @@
       "amount": -10.0,
       "currency": "USD",
       "account": "Wise USD",
-      "expected_category": "Fees & Charges"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-03",
@@ -958,7 +958,7 @@
       "amount": -360.0,
       "currency": "UYU",
       "account": "VISA Credit",
-      "expected_category": "Entertainment"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-09",
@@ -1006,7 +1006,7 @@
       "amount": -720.0,
       "currency": "UYU",
       "account": "VISA Credit",
-      "expected_category": "Entertainment"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-16",
@@ -1134,7 +1134,7 @@
       "amount": -720.0,
       "currency": "UYU",
       "account": "VISA Credit",
-      "expected_category": "Entertainment"
+      "expected_category": "Subscriptions"
     },
     {
       "date": "2026-01-12",

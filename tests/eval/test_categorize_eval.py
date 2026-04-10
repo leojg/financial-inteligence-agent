@@ -18,7 +18,11 @@ SEMANTIC_EQUIVALENTS: dict[str, set[str]] = {
     "other income": {"transfer"},
     "salary": {"freelance"},
     "freelance": {"salary"},
-    "fees & charges": {"other"},  # SaaS subscriptions inconsistently get "Other"
+    "fees & charges": {"other"},
+    # Label Subscriptions (streaming/SaaS); model may still say Entertainment.
+    "subscriptions": {"entertainment"},
+    # Label Withdrawals (ATM); model may still say Other.
+    "withdrawals": {"other"},
 }
 
 

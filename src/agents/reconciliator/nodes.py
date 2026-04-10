@@ -483,7 +483,11 @@ def make_categorize_node(
                         Use consistent, common category names such as:
                         Groceries, Dining, Transport, Utilities, Healthcare, Entertainment,
                         Shopping, Travel, Education, Salary, Freelance, Transfer, Fees & Charges,
-                        Rent, Other Income, Other.
+                        Rent, Withdrawals, Subscriptions, Other Income, Other.
+
+                        A cash or ATM withdrawal should be categorized as Withdrawals.
+                        A SaaS, subscription, or recurring payment should be categorized as Subscriptions.
+                        A bookstore, stationery or office supply purchase should be categorized as Shopping.
 
                         You may use a different category if none of the above fit, but prefer
                         the list above for common transactions.

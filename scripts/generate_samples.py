@@ -30,6 +30,10 @@ BASELINE_START = date(2026, 1, 1)
 BASELINE_END   = date(2026, 1, 31)
 
 # ── Shared transaction data ──────────────────────────────────────────────────
+# Categories align with reconciliator categorize prompt: Withdrawals (ATM/cash),
+# Subscriptions (SaaS / recurring), plus Groceries, Dining, Transport, Utilities,
+# Healthcare, Entertainment, Shopping, Travel, Education, Salary, Freelance,
+# Transfer, Fees & Charges, Rent, Other Income, Other.
 
 # Itaú - Cuenta Corriente (UYU) — XLSX
 ITAU_TRANSACTIONS = [
@@ -38,7 +42,7 @@ ITAU_TRANSACTIONS = [
     ("2026-01-05", "FARMACIA DEL PUEBLO",         -420.00,  "UYU", "Healthcare"),
     ("2026-01-06", "SUPERMERCADO TIENDA INGLESA", -3120.00, "UYU", "Groceries"),
     ("2026-01-07", "YPF COMBUSTIBLES",            -1800.00, "UYU", "Transport"),
-    ("2026-01-08", "NETFLIX",                     -720.00,  "UYU", "Entertainment"),
+    ("2026-01-08", "NETFLIX",                     -720.00,  "UYU", "Subscriptions"),
     ("2026-01-09", "UBER",                        -380.00,  "UYU", "Transport"),
     ("2026-01-10", "RESTAURANT LA PASCUALA",      -1560.00, "UYU", "Dining"),
     ("2026-01-12", "SUPERMERCADO DISCO",          -1950.00, "UYU", "Groceries"),
@@ -54,7 +58,7 @@ ITAU_TRANSACTIONS = [
     ("2026-01-21", "RESTAURANT EL PALENQUE",      -2100.00, "UYU", "Dining"),
     ("2026-01-22", "TRANSFER TO BROU",            -8000.00, "UYU", "Transfer"),
     ("2026-01-23", "SUPERMERCADO DISCO",          -1780.00, "UYU", "Groceries"),
-    ("2026-01-24", "SPOTIFY",                     -360.00,  "UYU", "Entertainment"),
+    ("2026-01-24", "SPOTIFY",                     -360.00,  "UYU", "Subscriptions"),
     ("2026-01-25", "UBER",                        -420.00,  "UYU", "Transport"),
     ("2026-01-26", "FARMACIA URUGUAYA",           -890.00,  "UYU", "Healthcare"),
     ("2026-01-27", "SUPERMERCADO TIENDA INGLESA", -2680.00, "UYU", "Groceries"),
@@ -71,49 +75,49 @@ BROU_TRANSACTIONS = [
     ("2026-01-05", "TRANSFER FROM ITAU",           8000.00, "UYU", "Transfer"),
     ("2026-01-06", "SUPERMERCADO DISCO",          -1950.00, "UYU", "Groceries"),
     ("2026-01-08", "ABITAB PAGO SERVICIOS",       -1200.00, "UYU", "Utilities"),
-    ("2026-01-10", "RETIRO CAJERO ATM",           -3000.00, "UYU", "Other"),
+    ("2026-01-10", "RETIRO CAJERO ATM",           -3000.00, "UYU", "Withdrawals"),
     ("2026-01-12", "COBRO FREELANCE WEB",          9500.00, "UYU", "Freelance"),
     ("2026-01-14", "FARMACIA DEL PUEBLO",          -420.00, "UYU", "Healthcare"),
     ("2026-01-15", "PAGO TARJETA CREDITO",        -6500.00, "UYU", "Fees & Charges"),
-    ("2026-01-17", "RETIRO CAJERO ATM",           -2000.00, "UYU", "Other"),
+    ("2026-01-17", "RETIRO CAJERO ATM",           -2000.00, "UYU", "Withdrawals"),
     ("2026-01-19", "YPF COMBUSTIBLES",            -1800.00, "UYU", "Transport"),
     ("2026-01-20", "ANTEL FIBRA OPTICA",           -650.00, "UYU", "Utilities"),
     ("2026-01-21", "SUPERMERCADO DISCO",          -2100.00, "UYU", "Groceries"),
     ("2026-01-22", "COBRO FREELANCE APP",          7200.00, "UYU", "Freelance"),
-    ("2026-01-24", "RETIRO CAJERO ATM",           -2500.00, "UYU", "Other"),
+    ("2026-01-24", "RETIRO CAJERO ATM",           -2500.00, "UYU", "Withdrawals"),
     ("2026-01-25", "RESTAURANT LA PASCUALA",      -1560.00, "UYU", "Dining"),
     ("2026-01-27", "ABITAB PAGO DGI",             -3200.00, "UYU", "Fees & Charges"),
     ("2026-01-28", "SUPERMERCADO TIENDA INGLESA", -1890.00, "UYU", "Groceries"),
-    ("2026-01-29", "RETIRO CAJERO ATM",           -2000.00, "UYU", "Other"),
+    ("2026-01-29", "RETIRO CAJERO ATM",           -2000.00, "UYU", "Withdrawals"),
     ("2026-01-30", "PAGO MUTUAL MEDICA",          -1100.00, "UYU", "Healthcare"),
     ("2026-01-31", "SALDO FINAL",                    0.00,  "UYU", "Other"),
 ]
 
 # Wise - USD Account (USD) — PDF
 WISE_TRANSACTIONS = [
-    ("2026-01-02", "GITHUB COPILOT",               -10.00,  "USD", "Fees & Charges"),
-    ("2026-01-03", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Fees & Charges"),
+    ("2026-01-02", "GITHUB COPILOT",               -10.00,  "USD", "Subscriptions"),
+    ("2026-01-03", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Subscriptions"),
     ("2026-01-05", "REMOTE JOB PAYMENT JAN",      1800.00,  "USD", "Salary"),
-    ("2026-01-06", "ADOBE CREATIVE CLOUD",         -54.99,  "USD", "Fees & Charges"),
-    ("2026-01-07", "NAMECHEAP DOMAIN",             -15.88,  "USD", "Fees & Charges"),
-    ("2026-01-08", "CHATGPT PLUS",                 -20.00,  "USD", "Fees & Charges"),
-    ("2026-01-10", "AMAZON WEB SERVICES",          -38.42,  "USD", "Fees & Charges"),
+    ("2026-01-06", "ADOBE CREATIVE CLOUD",         -54.99,  "USD", "Subscriptions"),
+    ("2026-01-07", "NAMECHEAP DOMAIN",             -15.88,  "USD", "Subscriptions"),
+    ("2026-01-08", "CHATGPT PLUS",                 -20.00,  "USD", "Subscriptions"),
+    ("2026-01-10", "AMAZON WEB SERVICES",          -38.42,  "USD", "Subscriptions"),
     ("2026-01-12", "UDEMY COURSE PURCHASE",        -29.99,  "USD", "Education"),
-    ("2026-01-14", "FIGMA PROFESSIONAL",           -15.00,  "USD", "Fees & Charges"),
+    ("2026-01-14", "FIGMA PROFESSIONAL",           -15.00,  "USD", "Subscriptions"),
     ("2026-01-15", "TRANSFER TO LOCAL BANK",      -500.00,  "USD", "Transfer"),
-    ("2026-01-16", "NOTION TEAM PLAN",             -16.00,  "USD", "Fees & Charges"),
-    ("2026-01-17", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Fees & Charges"),
+    ("2026-01-16", "NOTION TEAM PLAN",             -16.00,  "USD", "Subscriptions"),
+    ("2026-01-17", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Subscriptions"),
     ("2026-01-18", "UPWORK FREELANCE INCOME",      620.00,  "USD", "Freelance"),
-    ("2026-01-20", "GITHUB COPILOT",               -10.00,  "USD", "Fees & Charges"),
-    ("2026-01-21", "ANTHROPIC API USAGE",          -42.80,  "USD", "Fees & Charges"),
-    ("2026-01-22", "ZOOM SUBSCRIPTION",            -15.99,  "USD", "Fees & Charges"),
-    ("2026-01-23", "AMAZON WEB SERVICES",          -41.17,  "USD", "Fees & Charges"),
-    ("2026-01-24", "1PASSWORD FAMILY",              -4.99,  "USD", "Fees & Charges"),
+    ("2026-01-20", "GITHUB COPILOT",               -10.00,  "USD", "Subscriptions"),
+    ("2026-01-21", "ANTHROPIC API USAGE",          -42.80,  "USD", "Subscriptions"),
+    ("2026-01-22", "ZOOM SUBSCRIPTION",            -15.99,  "USD", "Subscriptions"),
+    ("2026-01-23", "AMAZON WEB SERVICES",          -41.17,  "USD", "Subscriptions"),
+    ("2026-01-24", "1PASSWORD FAMILY",              -4.99,  "USD", "Subscriptions"),
     ("2026-01-25", "UPWORK FREELANCE INCOME",      480.00,  "USD", "Freelance"),
-    ("2026-01-27", "ANTHROPIC API USAGE",         -189.40,  "USD", "Fees & Charges"),
-    ("2026-01-28", "TAILSCALE VPN",                -18.00,  "USD", "Fees & Charges"),
-    ("2026-01-30", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Fees & Charges"),
-    ("2026-01-31", "GITHUB COPILOT",               -10.00,  "USD", "Fees & Charges"),
+    ("2026-01-27", "ANTHROPIC API USAGE",         -189.40,  "USD", "Subscriptions"),
+    ("2026-01-28", "TAILSCALE VPN",                -18.00,  "USD", "Subscriptions"),
+    ("2026-01-30", "DIGITAL OCEAN DROPLET",        -24.00,  "USD", "Subscriptions"),
+    ("2026-01-31", "GITHUB COPILOT",               -10.00,  "USD", "Subscriptions"),
 ]
 
 # VISA Credit Card — PDF
@@ -122,13 +126,13 @@ VISA_TRANSACTIONS = [
     ("2026-01-04", "RESTAURANT PANORAMICO",       -4800.00, "UYU", "Dining"),
     ("2026-01-05", "ZARA PUNTA CARRETAS",         -5600.00, "UYU", "Shopping"),
     ("2026-01-06", "FARMACIA DEL PUEBLO",          -420.00, "UYU", "Healthcare"),
-    ("2026-01-07", "SPOTIFY",                      -360.00, "UYU", "Entertainment"),
+    ("2026-01-07", "SPOTIFY",                      -360.00, "UYU", "Subscriptions"),
     ("2026-01-09", "APPLE STORE",                -12800.00, "UYU", "Shopping"),
     ("2026-01-10", "UBER",                         -380.00, "UYU", "Transport"),
     ("2026-01-11", "SUPERMERCADO TIENDA INGLESA", -2890.00, "UYU", "Groceries"),
     ("2026-01-13", "RESTAURANT DON PEPERONE",     -1980.00, "UYU", "Dining"),
     ("2026-01-14", "DECATHLON MONTEVIDEO",        -3400.00, "UYU", "Shopping"),
-    ("2026-01-15", "NETFLIX",                      -720.00, "UYU", "Entertainment"),
+    ("2026-01-15", "NETFLIX",                      -720.00, "UYU", "Subscriptions"),
     ("2026-01-16", "HOTEL COTTAGE COLONIA",       -8900.00, "UYU", "Travel"),
     ("2026-01-17", "YPF COMBUSTIBLES",            -1800.00, "UYU", "Transport"),
     ("2026-01-18", "SUPERMERCADO DISCO",          -2640.00, "UYU", "Groceries"),
@@ -171,7 +175,7 @@ SUSPICIOUS_ITAU_ROWS = [
 
 _bait_itau, _bait_brou = _eval_cross_bank_bait_rows()
 ITAU_TRANSACTIONS = ITAU_TRANSACTIONS + SUSPICIOUS_ITAU_ROWS + [
-    ("2026-01-11", "EVAL ALIAS NETFLIX",     -720.00, "UYU", "Entertainment"),
+    ("2026-01-11", "EVAL ALIAS NETFLIX",     -720.00, "UYU", "Subscriptions"),
     ("2026-01-12", "EVAL UBER EATS STAR",    -450.00, "UYU", "Dining"),
     ("2026-01-13", "EVAL MERCADOLIBRE",      -800.00, "UYU", "Shopping"),
 ] + _bait_itau
@@ -179,7 +183,7 @@ ITAU_TRANSACTIONS = ITAU_TRANSACTIONS + SUSPICIOUS_ITAU_ROWS + [
 BROU_TRANSACTIONS = BROU_TRANSACTIONS + _bait_brou
 
 VISA_TRANSACTIONS = VISA_TRANSACTIONS + [
-    ("2026-01-11", "EVAL NF STAR NETFLIX",   -720.00, "UYU", "Entertainment"),
+    ("2026-01-11", "EVAL NF STAR NETFLIX",   -720.00, "UYU", "Subscriptions"),
     ("2026-01-12", "EVAL UBER EATS DN",      -450.00, "UYU", "Dining"),
     ("2026-01-13", "EVAL MELI MERCADOLIBRE", -792.00, "UYU", "Shopping"),
 ]
@@ -643,7 +647,7 @@ def generate_visa_image(transactions, out, start, end):
 # Categories that can produce a physical/digital receipt
 RECEIPT_CATEGORIES = {
     "Groceries", "Dining", "Shopping", "Healthcare",
-    "Entertainment", "Transport", "Education",
+    "Entertainment", "Transport", "Education", "Subscriptions",
 }
 
 # Merchant registry: display name, address, phone, tax id, receipt prefix

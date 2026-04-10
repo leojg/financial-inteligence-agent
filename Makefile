@@ -9,7 +9,7 @@ TEST_FILE ?= tests/unit_tests/
 test:
 	python -m pytest $(TEST_FILE) -m "not eval"
 
-# Full LLM eval suite: normalization, categorization, duplicates, suspicious, insights (no chat eval).
+# Full LLM eval suite: normalize, categorize, duplicates, suspicious, insights, chat tool selection.
 eval eval-full:
 	python -m pytest tests/eval/ -v --tb=short -m eval -s
 

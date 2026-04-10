@@ -55,7 +55,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 markers = [
-    "eval: LLM evaluation tests (require real API keys, slow — run with make eval)",
+    "eval: LLM evaluation tests (require real API keys, slow — run with make eval; includes chat tool-selection)",
 ]
 
 [tool.ruff]
