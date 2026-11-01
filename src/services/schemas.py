@@ -29,6 +29,9 @@ class RunResult(BaseModel):
     flagged_transactions: list[dict[str, Any]] | None = None
     report: str | None = None
     interrupt_at: str | None = None
+    statements: dict[str, Any] | None = (
+        None  # v1.6 summary: counts by balance status + per statement
+    )
 
 
 class InsightsResponse(BaseModel):

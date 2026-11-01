@@ -12,8 +12,10 @@ from typing import Any
 from agents.reconciliator.configuration import DEFAULT_CONFIG
 from agents.reconciliator.graph import make_graph
 from agents.reconciliator.state import initial_state
+from agents.reconciliator.statements.build import summarize
 from services.schemas import RunResult, RunStatus
 from shared.db import get_checkpointer
+from shared.models import Statement
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,15 @@ logger = logging.getLogger(__name__)
 _graph_interactive: Any = None
 _graph_auto_approve: Any = None
 _checkpointer: Any = None
+
+
+def _statements_summary(values: dict[str, Any]) -> dict[str, Any] | None:
+    """Summarize the run's statements (v1.6 balance check) for the API response."""
+    statements = [
+        Statement.model_validate(s) if isinstance(s, dict) else s
+        for s in values.get("statements") or []
+    ]
+    return summarize(statements) if statements else None
 
 
 def _get_checkpointer() -> Any:
@@ -127,6 +138,7 @@ def run(
                 total_suspicious=len(suspicious),
                 flagged_transactions=suspicious if suspicious else None,
                 report=values.get("report"),
+                statements=_statements_summary(values),
             )
         except Exception as e:
             logger.exception("Reconciliation failed for run_id=%s", run_id)
@@ -198,6 +210,7 @@ def get_status(run_id: str, thread_id: str) -> RunResult:
             total_suspicious=len(suspicious),
             flagged_transactions=suspicious if suspicious else None,
             report=values.get("report"),
+            statements=_statements_summary(values),
         )
 
     except Exception as e:

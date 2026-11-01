@@ -13,6 +13,7 @@ from agents.reconciliator.nodes import (
     human_review,
     ingest,
     make_categorize_node,
+    make_check_statements_node,
     make_convert_currency_node,
     make_detect_duplicates_node,
     make_flag_suspicious_node,
@@ -79,6 +80,7 @@ def make_graph(
     graph.add_node("ingest", ingest)
     graph.add_node("ingest_images", make_ingest_images_node(config))  # type: ignore[arg-type]
     graph.add_node("normalize", make_normalize_node(config))  # type: ignore[arg-type]
+    graph.add_node("check_statements", make_check_statements_node(config))  # type: ignore[arg-type]
     graph.add_node(
         "review_low_confidence_transactions",
         make_review_low_confidence_transactions_node(config),  # type: ignore[arg-type]
@@ -108,8 +110,9 @@ def make_graph(
     graph.add_edge("skip_images", "normalize")
     graph.add_edge("skip_documents", "normalize")
 
+    graph.add_edge("normalize", "check_statements")
     graph.add_conditional_edges(
-        "normalize",
+        "check_statements",
         _make_has_low_confidence(config.image_low_confidence_threshold),
         {
             "review_low_confidence_transactions": "review_low_confidence_transactions",

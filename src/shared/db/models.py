@@ -85,6 +85,16 @@ class TransactionRecord(Base):
     review_reason = Column(String)
     review_status = Column(String)
     confidence = Column(Float)
+    # Traceability to the printed statement (v1.6).
+    statement_id = Column(String)
+    page = Column(Integer)
+    row_index = Column(Integer)
+    raw_text = Column(Text)
+    amount_raw = Column(String)
+    balance_after = Column(Float)
+    sign_source = Column(String)
+    installment_n = Column(Integer)
+    installment_m = Column(Integer)
 
     run = relationship("RunHistory", back_populates="transactions")
 
@@ -95,7 +105,55 @@ class TransactionRecord(Base):
         Index("idx_transactions_account", "account"),
         Index("idx_transactions_category", "category"),
         Index("idx_transactions_run_date", "run_id", "date"),
+        Index("idx_transactions_statement_id", "statement_id"),
     )
+
+
+class StatementRecord(Base):
+    """What a statement says about itself and whether its arithmetic closed (v1.6)."""
+
+    __tablename__ = "statements"
+
+    id = Column(String, primary_key=True)
+    run_id = Column(String, ForeignKey("runs_history.run_id"), nullable=False)
+    source_file = Column(String, nullable=False)
+    file_sha256 = Column(String, nullable=False)
+    institution = Column(String)
+    account = Column(String)
+    account_type = Column(String)
+    currency = Column(String)
+    period_start = Column(String)
+    period_end = Column(String)
+    opening_balance = Column(Float)
+    opening_balance_raw = Column(String)
+    closing_balance = Column(Float)
+    closing_balance_raw = Column(String)
+    printed_totals_json = Column(Text, nullable=False, default="{}")
+    row_count = Column(Integer, nullable=False, default=0)
+    extractor = Column(String)
+    extractor_version = Column(String)
+    balance_status = Column(String)
+    balance_detail = Column(Text)
+    breaks_json = Column(Text, nullable=False, default="[]")
+    diagnostics_json = Column(Text, nullable=False, default="[]")
+    created_at = Column(String, nullable=False)
+
+    __table_args__ = (
+        Index("idx_statements_run_id", "run_id"),
+        Index("idx_statements_file_sha256", "file_sha256"),
+        Index("idx_statements_account_period", "account", "period_start"),
+    )
+
+
+class StatementExtractionCache(Base):
+    """Extracted statements keyed by file bytes + extractor version; only verified results are stored."""
+
+    __tablename__ = "statement_extraction_cache"
+
+    cache_key = Column(String, primary_key=True)
+    file_sha256 = Column(String, nullable=False)
+    statements_json = Column(Text, nullable=False)
+    created_at = Column(String, nullable=False)
 
 
 class MerchantCategory(Base):

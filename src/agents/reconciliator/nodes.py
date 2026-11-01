@@ -17,8 +17,18 @@ from langchain_openai import ChatOpenAI
 
 from agents.reconciliator.configuration import ReconciliationConfig
 from agents.reconciliator.state import ReconciliationState
+from agents.reconciliator.statements.build import (
+    legacy_statements,
+    report_lines,
+    unreadable_statement,
+)
+from agents.reconciliator.statements.header import (
+    make_header_transcriber,
+    read_header_with_fallback,
+)
+from agents.reconciliator.statements.pdf import PdfReadError, file_sha256, load_pdf
 from agents.reconciliator.utils.parsers import load_documents
-from shared.models import RawDocument, Receipt, ReceiptLine, Transaction
+from shared.models import RawDocument, Receipt, ReceiptLine, Statement, Transaction
 from shared.repositories.database_repository import (
     DatabaseRepository as DatabaseService,
 )
@@ -250,7 +260,8 @@ def make_normalize_node(
             if cached is not None:
                 for t in cached:
                     t.setdefault("confidence", getattr(doc, "confidence", None))
-                    t.setdefault("source_file", doc.source_file)
+                    # The file is known; a cached path may be another run's temp dir.
+                    t["source_file"] = doc.source_file
                     transactions.append(Transaction(**t))
                 continue
 
@@ -284,7 +295,9 @@ def make_normalize_node(
                 raw_json = json.loads(_llm_content_str(response.content))
                 for t in raw_json:
                     t["id"] = str(uuid.uuid4())
-                    t.setdefault("source_file", doc.source_file)
+                    t["source_file"] = (
+                        doc.source_file
+                    )  # the file is known, not the LLM's to say
                     t.setdefault("confidence", getattr(doc, "confidence", None))
                     transactions.append(Transaction(**t))
                 database_service.save_normalized_document(
@@ -381,6 +394,70 @@ def make_review_low_confidence_transactions_node(
         }
 
     return review_low_confidence_transactions
+
+
+def make_check_statements_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a node that builds and balance-checks one Statement per PDF statement (v1.6).
+
+    With the ``legacy`` extractor, statements are built from the transactions
+    ``normalize`` produced for each PDF, which stay as they are: the check only
+    measures them (v1.6 phase 1).
+    """
+    transcribe = (
+        make_header_transcriber(
+            ChatOpenAI(
+                model=config.statement_model_name, temperature=config.temperature
+            )
+        )
+        if config.statement_header_llm
+        else None
+    )
+
+    def check_statements(state: ReconciliationState) -> dict[str, Any]:
+        transactions = [
+            Transaction(**t) if isinstance(t, dict) else t
+            for t in state["transactions"]
+        ]
+        statements = [
+            Statement.model_validate(s) if isinstance(s, dict) else s
+            for s in state.get("statements") or []
+        ]
+        if config.statement_extractor != "legacy":
+            return {"statements": statements}
+
+        pdfs = [
+            f
+            for f in state.get("source_files") or []
+            if Path(f).suffix.lower() == ".pdf"
+        ]
+        linked: dict[str, Transaction] = {}
+        for path in pdfs:
+            own = [t for t in transactions if t.source_file == path]
+            try:
+                document = load_pdf(path, config.pdf_passwords)
+            except PdfReadError as e:
+                logger.warning("Statement check: %s", e)
+                statements.append(
+                    unreadable_statement(
+                        path, file_sha256(path), "unreadable_pdf", str(e)
+                    )
+                )
+                continue
+            header = read_header_with_fallback(
+                document, transcribe, config.statement_local_currency
+            )
+            built, with_ids = legacy_statements(path, document.sha256, header, own)
+            statements.extend(built)
+            linked.update({t.id: t for t in with_ids})
+
+        return {
+            "statements": statements,
+            "transactions": [linked.get(t.id, t) for t in transactions],
+        }
+
+    return check_statements
 
 
 def make_convert_currency_node(
@@ -893,12 +970,23 @@ def generate_report(
     By category: {by_category}
     """
 
+    statements = [
+        Statement.model_validate(s) if isinstance(s, dict) else s
+        for s in state.get("statements") or []
+    ]
+    statement_lines = report_lines(statements)
+    if statement_lines:
+        report += "\n".join(f"    {line}" for line in statement_lines) + "\n"
+
     run_id = state.get("run_id")
     if run_id:
         thread_id = (config or {}).get("configurable", {}).get("thread_id", "")
         source_paths = state.get("source_paths") or []
         database_service = DatabaseService()
         database_service.insert_run(run_id, thread_id, source_paths)
+        database_service.upsert_statements(
+            [database_service.statement_row(s, run_id) for s in statements]
+        )
         rows = [
             {
                 "id": t.id,
@@ -922,6 +1010,15 @@ def generate_report(
                 "review_reason": t.review_reason,
                 "review_status": t.review_status,
                 "confidence": t.confidence,
+                "statement_id": t.statement_id,
+                "page": t.page,
+                "row_index": t.row_index,
+                "raw_text": t.raw_text,
+                "amount_raw": t.amount_raw,
+                "balance_after": t.balance_after,
+                "sign_source": t.sign_source,
+                "installment_n": t.installment_n,
+                "installment_m": t.installment_m,
             }
             for t in transactions
         ]

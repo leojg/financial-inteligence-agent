@@ -328,14 +328,19 @@ _CLOSING = re.compile(
 )
 
 
+def balance_label(text: str) -> tuple[Literal["opening", "closing"], int] | None:
+    """Return the balance kind a folded line names and where its label ends, or None."""
+    for kind, pattern in (("opening", _OPENING), ("closing", _CLOSING)):
+        match = pattern.search(text)
+        if match:
+            return kind, match.end()  # type: ignore[return-value]
+    return None
+
+
 def balance_row_kind(description: str | None) -> Literal["opening", "closing"] | None:
     """Return whether a row is the statement's opening or closing balance, not a movement."""
-    text = fold(description or "")
-    if _OPENING.search(text):
-        return "opening"
-    if _CLOSING.search(text):
-        return "closing"
-    return None
+    found = balance_label(fold(description or ""))
+    return found[0] if found else None
 
 
 _INSTALLMENT = re.compile(

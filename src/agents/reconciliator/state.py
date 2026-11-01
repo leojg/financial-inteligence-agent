@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated, Any, TypedDict
 
-from shared.models import RawDocument, Receipt, Transaction
+from shared.models import RawDocument, Receipt, Statement, Transaction
 
 
 def keep_last(old: list[Any], new: list[Any]) -> list[Any]:
@@ -29,6 +29,7 @@ class ReconciliationState(TypedDict):
     raw_documents: Annotated[list[RawDocument], merge_raw_documents]
     transactions: Annotated[list[Transaction], keep_last]
     receipts: Annotated[list[Receipt], merge_receipts]
+    statements: Annotated[list[Statement], keep_last]
     duplicates: list[Transaction]
     suspicious: list[Transaction]
     exchange_rates: dict[str, float]
@@ -51,6 +52,7 @@ def initial_state(source_paths: list[str]) -> ReconciliationState:
         "low_confidence_decisions": None,
         "run_id": str(uuid.uuid4()),
         "receipts": [],
+        "statements": [],
     }
 
 
@@ -58,6 +60,7 @@ __all__ = [
     "RawDocument",
     "Receipt",
     "ReconciliationState",
+    "Statement",
     "Transaction",
     "initial_state",
     "keep_last",

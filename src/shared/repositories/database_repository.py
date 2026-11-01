@@ -17,6 +17,19 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+_TRANSACTION_TRACE_DEFAULTS: dict[str, Any] = {
+    "statement_id": None,
+    "page": None,
+    "row_index": None,
+    "raw_text": None,
+    "amount_raw": None,
+    "balance_after": None,
+    "sign_source": None,
+    "installment_n": None,
+    "installment_m": None,
+}
+
+
 def _ordered(a: str, b: str) -> tuple[str, str]:
     """Return (a, b) in consistent order so (a,b) and (b,a) map to the same row."""
     return (a, b) if a <= b else (b, a)
@@ -246,7 +259,9 @@ class DatabaseRepository:
                         category, duplicate_of,
                         suspicious, suspicious_reason,
                         needs_review, review_reason, review_status,
-                        confidence
+                        confidence,
+                        statement_id, page, row_index, raw_text, amount_raw,
+                        balance_after, sign_source, installment_n, installment_m
                     ) VALUES (
                         :id, :run_id, :fingerprint,
                         :date, :amount_original, :amount_base, :currency,
@@ -254,7 +269,9 @@ class DatabaseRepository:
                         :category, :duplicate_of,
                         :suspicious, :suspicious_reason,
                         :needs_review, :review_reason, :review_status,
-                        :confidence
+                        :confidence,
+                        :statement_id, :page, :row_index, :raw_text, :amount_raw,
+                        :balance_after, :sign_source, :installment_n, :installment_m
                     )
                     ON CONFLICT (id) DO UPDATE SET
                         run_id = :run_id, fingerprint = :fingerprint,
@@ -263,9 +280,107 @@ class DatabaseRepository:
                         category = :category, duplicate_of = :duplicate_of,
                         suspicious = :suspicious, suspicious_reason = :suspicious_reason,
                         needs_review = :needs_review, review_reason = :review_reason, review_status = :review_status,
-                        confidence = :confidence
+                        confidence = :confidence,
+                        statement_id = :statement_id, page = :page, row_index = :row_index,
+                        raw_text = :raw_text, amount_raw = :amount_raw, balance_after = :balance_after,
+                        sign_source = :sign_source, installment_n = :installment_n, installment_m = :installment_m
                 """),
-                transactions,
+                [{**_TRANSACTION_TRACE_DEFAULTS, **t} for t in transactions],
+            )
+            session.commit()
+
+    @staticmethod
+    def statement_row(statement: Any, run_id: str) -> dict[str, Any]:
+        """Map a ``shared.models.Statement`` to a ``statements`` table row."""
+        return {
+            "id": statement.id,
+            "run_id": run_id,
+            "source_file": statement.source_file,
+            "file_sha256": statement.file_sha256,
+            "institution": statement.institution,
+            "account": statement.account,
+            "account_type": statement.account_type,
+            "currency": statement.currency,
+            "period_start": statement.period_start,
+            "period_end": statement.period_end,
+            "opening_balance": statement.opening_balance,
+            "opening_balance_raw": statement.opening_balance_raw,
+            "closing_balance": statement.closing_balance,
+            "closing_balance_raw": statement.closing_balance_raw,
+            "printed_totals_json": json.dumps(statement.printed_totals),
+            "row_count": len(statement.rows),
+            "extractor": statement.extractor,
+            "extractor_version": statement.extractor_version,
+            "balance_status": statement.balance_status,
+            "balance_detail": statement.balance_detail,
+            "breaks_json": json.dumps(statement.breaks),
+            "diagnostics_json": json.dumps(statement.diagnostics, default=str),
+        }
+
+    def upsert_statements(self, statements: list[dict[str, Any]]) -> None:
+        """Insert or replace statement rows (see ``statement_row``)."""
+        if not statements:
+            return
+        columns = list(statements[0].keys()) + ["created_at"]
+        updates = ", ".join(
+            f"{c} = :{c}" for c in columns if c not in ("id", "created_at")
+        )
+        with get_session() as session:
+            session.execute(
+                text(f"""
+                    INSERT INTO statements ({", ".join(columns)})
+                    VALUES ({", ".join(":" + c for c in columns)})
+                    ON CONFLICT (id) DO UPDATE SET {updates}
+                """),
+                [{**s, "created_at": _now()} for s in statements],
+            )
+            session.commit()
+
+    def get_run_statements(self, run_id: str) -> list[dict[str, Any]]:
+        """Return the statements of a run, JSON columns decoded."""
+        with get_session() as session:
+            result = session.execute(
+                text(
+                    "SELECT * FROM statements WHERE run_id = :run_id ORDER BY source_file, currency"
+                ),
+                {"run_id": run_id},
+            )
+            rows = self._rows(result)
+        for row in rows:
+            for column in ("printed_totals_json", "breaks_json", "diagnostics_json"):
+                row[column.removesuffix("_json")] = json.loads(
+                    row.pop(column) or "null"
+                )
+        return rows
+
+    def get_statement_cache(self, cache_key: str) -> str | None:
+        """Return cached extracted statements (JSON) for a cache key, or None."""
+        with get_session() as session:
+            row = session.execute(
+                text(
+                    "SELECT statements_json FROM statement_extraction_cache WHERE cache_key = :k"
+                ),
+                {"k": cache_key},
+            ).fetchone()
+        return row[0] if row else None
+
+    def save_statement_cache(
+        self, cache_key: str, file_sha256: str, statements_json: str
+    ) -> None:
+        """Insert or replace cached extracted statements for a cache key."""
+        with get_session() as session:
+            session.execute(
+                text("""
+                    INSERT INTO statement_extraction_cache (cache_key, file_sha256, statements_json, created_at)
+                    VALUES (:k, :sha, :j, :now)
+                    ON CONFLICT (cache_key) DO UPDATE SET statements_json = :j, created_at = :now
+                """),
+                {
+                    "k": cache_key,
+                    "sha": file_sha256,
+                    "j": statements_json,
+                    "now": _now(),
+                },
             )
             session.commit()
 

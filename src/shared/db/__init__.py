@@ -19,6 +19,8 @@ _CHECKPOINT_SERDE = JsonPlusSerializer(
     allowed_json_modules=(
         ("shared.models", "RawDocument"),
         ("shared.models", "Transaction"),
+        ("shared.models", "Statement"),
+        ("shared.models", "StatementRow"),
     ),
 )
 
