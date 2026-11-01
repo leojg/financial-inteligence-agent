@@ -1459,6 +1459,16 @@ def generate_receipts_images(all_transactions: dict, out: str, start: date, end:
 
 # ── Eval labels ──────────────────────────────────────────────────────────────
 
+# Opening/closing balance lines are printed on the statements (real ones do) but
+# they are not movements, so no label lists them as a transaction (v1.6 F6).
+BALANCE_LINES = ("SALDO ANTERIOR", "SALDO FINAL")
+
+
+def _movements(txns: list[tuple]) -> list[tuple]:
+    """Drop the balance lines from a statement's rows."""
+    return [t for t in txns if t[1] not in BALANCE_LINES]
+
+
 def _normalization_entries(
     month: str, accounts: dict[str, list[tuple]]
 ) -> list[dict]:
@@ -1494,7 +1504,7 @@ def _normalization_entries(
             ),
         ),
     ):
-        txns = accounts[account_name]
+        txns = _movements(accounts[account_name])
         expected_transactions = [
             {
                 "date":     d,
@@ -1617,7 +1627,7 @@ def write_eval_labels(out_dir: Path, start: date, end: date) -> None:
     # 1. Categorization labels — one entry per transaction, all accounts
     categorization = []
     for account, txns in accounts.items():
-        for d, merchant, amount, currency, category in txns:
+        for d, merchant, amount, currency, category in _movements(txns):
             categorization.append({
                 "date":              d,
                 "merchant":          merchant,

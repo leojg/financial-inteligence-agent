@@ -9,6 +9,8 @@ from tabulate import tabulate
 
 from agents.reconciliator.configuration import DEFAULT_CONFIG
 from agents.reconciliator.nodes import make_normalize_node
+from agents.reconciliator.statements.build import statement_transactions
+from agents.reconciliator.statements.ladder import StatementExtractor
 from agents.reconciliator.utils.parsers import load_documents
 from shared.models import RawDocument, Transaction
 
@@ -103,19 +105,25 @@ def test_normalize_field_metrics(normalization_labels):
             pytest.skip(f"Missing sample file: {path} (run scripts/generate_samples.py)")
 
         expected = entry["expected_transactions"]
-        raw_documents = _raw_documents_like_ingest(str(path.resolve()))
-        state = {
-            "source_folder": str(DATA_DIR),
-            "raw_documents": raw_documents,
-            "transactions": [],
-            "duplicates": [],
-            "suspicious": [],
-            "exchange_rates": {},
-            "report": None,
-        }
-
-        result = make_normalize_node(DEFAULT_CONFIG)(state)
-        predicted: list[Transaction] = result.get("transactions") or []
+        if ft == "pdf":
+            # PDF statements go through the v1.6 reader (here its deterministic rungs only).
+            statements = StatementExtractor(DEFAULT_CONFIG).extract(str(path.resolve()))
+            predicted: list[Transaction] = [
+                t for s in statements for t in statement_transactions(s)[0]
+            ]
+        else:
+            raw_documents = _raw_documents_like_ingest(str(path.resolve()))
+            state = {
+                "source_folder": str(DATA_DIR),
+                "raw_documents": raw_documents,
+                "transactions": [],
+                "duplicates": [],
+                "suspicious": [],
+                "exchange_rates": {},
+                "report": None,
+            }
+            result = make_normalize_node(DEFAULT_CONFIG)(state)
+            predicted = result.get("transactions") or []
 
         pairs, extras = _match_by_date_amount_merchant(expected, predicted)
         matched = [(e, p) for e, p in pairs if p is not None]

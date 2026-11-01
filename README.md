@@ -29,10 +29,12 @@ A directed pipeline with fan-in/fan-out parallelism, conditional edges, and two 
 | Node | Responsibility |
 |---|---|
 | `prepare_ingest` | Expands source paths (folders + files) into a deduplicated file list |
-| `ingest` | Loads PDF and XLSX files into raw documents |
+| `ingest` | Loads XLSX files (and, with the `legacy` extractor, PDFs) into raw documents |
+| `extract_statements` | Reads every PDF statement with the v1.6 extraction ladder and checks it against its own balances (see [Statement accuracy](#statement-accuracy-v16)) |
 | `ingest_images` | Vision model (Claude Sonnet) extracts receipts and statements from images |
-| `skip_documents` / `skip_images` | Passthrough nodes when no documents or images are present |
-| `normalize` | LLM extracts transactions into a canonical schema with normalized document caching |
+| `skip_documents` / `skip_images` / `skip_statements` | Passthrough nodes when no documents, images or PDF statements are present |
+| `normalize` | LLM extracts transactions into a canonical schema with normalized document caching (XLSX and images) |
+| `check_statements` | Turns checked statements into transactions with traceability; with `legacy`, measures the per-page normalization against the statement's balances |
 | `review_low_confidence_transactions` | Interrupt — user confirms, edits, or dismisses low-confidence OCR extractions |
 | `convert_currency` | Fetches historical exchange rates and converts amounts to the base currency |
 | `categorize` | LLM assigns categories in batches, with merchant category caching |
@@ -41,7 +43,19 @@ A directed pipeline with fan-in/fan-out parallelism, conditional edges, and two 
 | `human_review` | Interrupt — user confirms or rejects flagged transactions via the UI |
 | `generate_report` | Persists transactions and receipts to the DB, produces a structured run summary |
 
-Key graph patterns: `prepare_ingest` uses conditional edges to fan out into parallel `ingest` + `ingest_images` paths (skipping either when no matching files exist), which fan back in at `normalize`. After normalization, a conditional edge routes to `review_low_confidence_transactions` only when OCR confidence is below threshold. After `categorize`, `detect_duplicates` and `flag_suspicious` run in parallel, converging at `human_review`.
+Key graph patterns: `prepare_ingest` uses conditional edges to fan out into parallel `ingest` + `extract_statements` + `ingest_images` paths (skipping either when no matching files exist), which fan back in at `normalize`. After normalization, a conditional edge routes to `review_low_confidence_transactions` only when OCR confidence is below threshold. After `categorize`, `detect_duplicates` and `flag_suspicious` run in parallel, converging at `human_review`.
+
+### Statement accuracy (v1.6)
+
+PDF statements are read so that every number can be checked and traced. Full design: [`docs/v1.6-statement-accuracy.md`](docs/v1.6-statement-accuracy.md).
+
+- **The statement checks itself.** Each statement's own arithmetic is verified: opening balance + movements = closing balance, the running balance row by row, and printed debit/credit totals. The result is a `balance_status` per statement — `ok`, `mismatch` (with the rows that break and the gap) or `no_balance` (nothing printed to check against). A sign error or a misread ambiguous number (`4.000`) that exactly one row explains is corrected and recorded; anything else is left as printed and flagged.
+- **Rules first, the model last.** The extraction ladder tries a deterministic table reader (columns located by their header labels, numbers placed by position, so Débito vs Crédito is never guessed), then — only if that does not close — an LLM that transcribes each page from its text and image. The model copies cells exactly as printed; code parses amounts, dates and signs. A page that still does not close is asked again once, with the discrepancy stated.
+- **Nothing is dropped silently.** Unreadable files, rows without a readable amount, lines with amounts that fit no row, balance lines and currencies that do not match the header all show up as diagnostics on the statement, in the run report and in the API response.
+- **Traceable rows.** Each transaction keeps its statement, page, row, printed text, printed amount, running balance and where its sign came from (`column`, `marker`, `convention`, `balance` or `llm`).
+- **Verified results are cached.** By the file's SHA-256 and the extractor version — and only when every statement closed.
+
+Statements are stored in the `statements` table; `STATEMENT_EXTRACTOR=legacy` keeps the pre-v1.6 per-page normalization (still checked, never changed) for comparison.
 
 ### Insights Agent
 
@@ -356,6 +370,15 @@ finance-intelligence-agent/
 │   │   │   ├── nodes.py            # Node implementations
 │   │   │   ├── state.py            # ReconciliationState, reducers, initial_state
 │   │   │   ├── configuration.py    # ReconciliationConfig
+│   │   │   ├── statements/         # v1.6 statement reader
+│   │   │   │   ├── pdf.py          # PDF → positioned words and lines, page images
+│   │   │   │   ├── header.py       # Institution, account, period, currency, balances, totals
+│   │   │   │   ├── table_reader.py # Deterministic table reader (columns by header, numbers by position)
+│   │   │   │   ├── llm_reader.py   # Page transcription (text + image, cells as printed)
+│   │   │   │   ├── ladder.py       # Extraction ladder, retry, cache
+│   │   │   │   ├── balance.py      # Balance check: closing, running balance, totals
+│   │   │   │   ├── build.py        # Statements per currency, transactions, summaries
+│   │   │   │   └── profiles.py     # Per-bank overrides (data)
 │   │   │   └── utils/
 │   │   │       └── parsers.py      # PDF and XLSX document loaders
 │   │   │
@@ -399,7 +422,8 @@ finance-intelligence-agent/
 │   │   │   ├── __init__.py         # SQLAlchemy engine, session factory, migrations, checkpointer
 │   │   │   ├── models.py           # ORM models (RunHistory, TransactionRecord, receipts, etc.)
 │   │   │   └── alembic/            # Alembic migration scripts
-│   │   ├── models.py               # Pydantic models (Transaction, RawDocument, Receipt, InsightsOutput)
+│   │   ├── models.py               # Pydantic models (Transaction, Statement, RawDocument, Receipt, InsightsOutput)
+│   │   ├── parsing.py              # Statement amounts, dates, currencies, signs (es-UY and en)
 │   │   └── repositories/
 │   │       ├── database_repository.py # All SQL — single source of truth for DB operations
 │   │       └── exchange_repository.py # Historical exchange rate fetching
@@ -408,7 +432,8 @@ finance-intelligence-agent/
 │       └── app.py                  # Streamlit UI (reconciliation, insights, settings, history tabs)
 │
 ├── scripts/
-│   └── generate_samples.py         # Synthetic bank statement and receipt generator (also writes eval_labels.json)
+│   ├── generate_samples.py         # Synthetic bank statement and receipt generator (also writes eval_labels.json)
+│   └── eval_private.py             # Statement extractors on your own PDFs (make eval-private)
 ├── tests/
 │   ├── unit_tests/                 # Mocked unit tests (no API keys required)
 │   └── eval/                       # LLM accuracy evals (real API calls)
@@ -447,6 +472,10 @@ The system uses separate configuration for each agent:
 | `temperature` | `0.0` | Deterministic outputs for consistency |
 | `base_currency` | `USD` | Target currency for amount conversion |
 | `image_low_confidence_threshold` | `0.98` | OCR results below this trigger human review |
+| `statement_extractor` | `ladder` | `ladder` (v1.6 reader) or `legacy` (pre-v1.6, measured only) — env `STATEMENT_EXTRACTOR` |
+| `statement_model_name` | `gpt-5.4-mini` | Model for statement header fallback and page transcription — env `STATEMENT_MODEL` |
+| `statement_local_currency` | `UYU` | What a bare `$` means in a statement header — env `STATEMENT_LOCAL_CURRENCY` |
+| `pdf_passwords` | — | Passwords tried on encrypted statement PDFs — env `STATEMENT_PDF_PASSWORDS` (comma-separated) |
 
 **`InsightsConfig`** (`src/agents/insights/configuration.py`):
 
@@ -597,6 +626,21 @@ Categorization matching uses case-insensitive substring comparison plus a **sema
 | Insights | Mean keyword coverage **100%**, mean numeric grounding **~69%** |
 | Normalize | **144** expected rows across four PDF/XLSX files; printed table shows **0** miss / **0** extra rows; **all4** (date+merchant+amount+currency) **56/56**, **36/36**, **23/23**, **29/29** — account column may be partial (e.g. **0/56** on Itaú in the logged run) |
 | Chat tool selection | **13** parametrized cases PASS (expected tools invoked) |
+
+### Private statement eval
+
+The synthetic statements are cleaner than real ones, so accuracy is measured on your own statements — locally, without them ever entering the repo:
+
+```bash
+mkdir -p data/private                      # gitignored
+cp ~/Downloads/estado_*.pdf data/private/
+
+make eval-private ARGS="--extractor rules"  # table reader only, no API calls
+make eval-private                           # the v1.6 ladder (needs OPENAI_API_KEY)
+make eval-private ARGS="--extractor all"    # ladder vs rules vs legacy, side by side
+```
+
+The output is aggregate only — per statement: balance status, rows, diagnostics, time and tokens. Without labels, the balance check alone says which statements close. For recall/precision and sign errors, `ARGS="--export-labels"` writes `data/private/labels/<file>.csv` from what was extracted; correct those once by hand and later runs measure against them. Full results go to `data/private/results/`.
 
 To regenerate labels after changing the synthetic data:
 

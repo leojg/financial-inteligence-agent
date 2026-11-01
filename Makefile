@@ -1,4 +1,4 @@
-.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests eval eval-full
+.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests eval eval-full eval-private
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -12,6 +12,10 @@ test:
 # Full LLM eval suite: normalize, categorize, duplicates, suspicious, insights, chat tool selection.
 eval eval-full:
 	python -m pytest tests/eval/ -v --tb=short -m eval -s
+
+# Statement extractors on your own PDFs (data/private/, gitignored), locally. ARGS="--extractor all" etc.
+eval-private:
+	python scripts/eval_private.py $(ARGS)
 
 integration_tests:
 	python -m pytest tests/integration_tests 
@@ -69,4 +73,5 @@ help:
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
 	@echo 'test_watch                   - run unit tests in watch mode'
 	@echo 'eval / eval-full             - full LLM eval suite under tests/eval/ (requires OPENAI_API_KEY)'
+	@echo 'eval-private ARGS=...        - statement extractors on your own PDFs in data/private/ (local only)'
 

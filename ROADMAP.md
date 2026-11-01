@@ -304,6 +304,8 @@ The v1.4 normalize eval scores 100% on synthetic statements that are far cleaner
 
 **Full spec:** `docs/v1.6-statement-accuracy.md`
 
+**Status:** phases 1 (measure) and 2 (parsing + PDF reader) implemented; to be measured locally on real statements with `make eval-private`. Phases 3 (report correctness) and 4 (other formats) pending.
+
 ---
 
 ## v1.7 — Email Ingestion

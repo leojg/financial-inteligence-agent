@@ -449,14 +449,6 @@
       "expected_category": "Shopping"
     },
     {
-      "date": "2026-01-01",
-      "merchant": "SALDO ANTERIOR",
-      "amount": 15000.0,
-      "currency": "UYU",
-      "account": "BROU Ahorros",
-      "expected_category": "Other Income"
-    },
-    {
       "date": "2026-01-03",
       "merchant": "PAGO ALQUILER",
       "amount": -18500.0,
@@ -607,14 +599,6 @@
       "currency": "UYU",
       "account": "BROU Ahorros",
       "expected_category": "Healthcare"
-    },
-    {
-      "date": "2026-01-31",
-      "merchant": "SALDO FINAL",
-      "amount": 0.0,
-      "currency": "UYU",
-      "account": "BROU Ahorros",
-      "expected_category": "Other"
     },
     {
       "date": "2026-01-14",
@@ -2697,13 +2681,6 @@
       "file_type": "xlsx",
       "expected_transactions": [
         {
-          "date": "2026-01-01",
-          "merchant": "SALDO ANTERIOR",
-          "amount": 15000.0,
-          "currency": "UYU",
-          "account": "BROU Ahorros"
-        },
-        {
           "date": "2026-01-03",
           "merchant": "PAGO ALQUILER",
           "amount": -18500.0,
@@ -2833,13 +2810,6 @@
           "date": "2026-01-30",
           "merchant": "PAGO MUTUAL MEDICA",
           "amount": -1100.0,
-          "currency": "UYU",
-          "account": "BROU Ahorros"
-        },
-        {
-          "date": "2026-01-31",
-          "merchant": "SALDO FINAL",
-          "amount": 0.0,
           "currency": "UYU",
           "account": "BROU Ahorros"
         },
@@ -2955,13 +2925,6 @@
       "file_type": "image",
       "expected_transactions": [
         {
-          "date": "2026-01-01",
-          "merchant": "SALDO ANTERIOR",
-          "amount": 15000.0,
-          "currency": "UYU",
-          "account": "BROU Ahorros"
-        },
-        {
           "date": "2026-01-03",
           "merchant": "PAGO ALQUILER",
           "amount": -18500.0,
@@ -3091,13 +3054,6 @@
           "date": "2026-01-30",
           "merchant": "PAGO MUTUAL MEDICA",
           "amount": -1100.0,
-          "currency": "UYU",
-          "account": "BROU Ahorros"
-        },
-        {
-          "date": "2026-01-31",
-          "merchant": "SALDO FINAL",
-          "amount": 0.0,
           "currency": "UYU",
           "account": "BROU Ahorros"
         },
