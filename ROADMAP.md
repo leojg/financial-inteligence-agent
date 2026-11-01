@@ -281,6 +281,29 @@ This milestone is experiment-driven. Every optimization follows the same loop: i
 
 ---
 
+## v1.6 — Statement Extraction Accuracy
+
+*Goal: make the numbers extracted from real bank and card statements trustworthy enough to build a multi-month expense report on, and make every remaining error visible instead of silent.*
+
+The v1.4 normalize eval scores 100% on synthetic statements that are far cleaner than real ones (ISO dates, signed amounts, a currency on every row, one page). On real statements accuracy was the blocker. This milestone changes how statements are read and, above all, how each reading is checked.
+
+**Scope:**
+- `Statement` as a first-class object: institution, account, currency, period, opening/closing balance, extractor, `balance_status`, diagnostics
+- Balance check on every statement: opening + movements = closing, running-balance chain row by row (pinpoints the wrong row, derives the sign) — a label-free accuracy metric
+- Extraction ladder: structured exports (XLSX/XLS/CSV) parsed deterministically → per-bank PDF profiles (word coordinates) → hardened LLM (transcribe-only, whole-statement header, text + image, anchors, page counts, targeted retry) → review
+- Number, date, currency and sign parsing in code, raw string kept beside every parsed value, unparsable = NULL
+- No silent loss: every dropped file, page and row counted with a reason
+- Expense-report correctness: transaction `kind`, own-account transfer and card-payment pairing, balance rows out of transactions, unconverted amounts reported
+- Private real-statement eval set (gitignored) and a more realistic synthetic set
+
+**Does not deliver:**
+- Review and report UI (stage 2)
+- Categorization changes (v1.5)
+
+**Full spec:** `docs/v1.6-statement-accuracy.md`
+
+---
+
 ## Backlog / Future Considerations
 
 Ideas that are out of scope for the current roadmap but worth tracking:
