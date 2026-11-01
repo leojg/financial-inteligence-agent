@@ -24,8 +24,10 @@ def _statement(rows: list[StatementRow], **extra: Any) -> Statement:
 def test_deposit_statement_closes() -> None:
     s = _statement(
         [_row(0, -200.0), _row(1, 50.25)],
-        account_type="deposit", opening_balance=1000.0, closing_balance=850.25,
-    )  # fmt: skip
+        account_type="deposit",
+        opening_balance=1000.0,
+        closing_balance=850.25,
+    )
     result = check_balance(s)
     assert result.balance_status == "ok"
     assert result.breaks == []
@@ -34,8 +36,10 @@ def test_deposit_statement_closes() -> None:
 def test_deposit_statement_does_not_close_reports_gap() -> None:
     s = _statement(
         [_row(0, -200.0), _row(1, 50.0)],
-        account_type="deposit", opening_balance=1000.0, closing_balance=900.0,
-    )  # fmt: skip
+        account_type="deposit",
+        opening_balance=1000.0,
+        closing_balance=900.0,
+    )
     result = check_balance(s)
     assert result.balance_status == "mismatch"
     assert "gap 50.00" in (result.balance_detail or "")
@@ -66,8 +70,10 @@ def test_no_balances_is_no_balance() -> None:
 def test_unreadable_amount_is_mismatch() -> None:
     s = _statement(
         [_row(0, -200.0), _row(1, None, amount_raw="1.2.3")],
-        account_type="deposit", opening_balance=1000.0, closing_balance=800.0,
-    )  # fmt: skip
+        account_type="deposit",
+        opening_balance=1000.0,
+        closing_balance=800.0,
+    )
     result = check_balance(s)
     assert result.balance_status == "mismatch"
     assert "without a readable amount" in (result.balance_detail or "")

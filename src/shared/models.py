@@ -4,7 +4,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-SignSource = Literal["column", "marker", "balance", "llm"]
+# column: Débito/Crédito position · marker: printed minus/CR/DB · convention: an
+# unsigned amount read by the statement's convention · balance: derived from the
+# running balance · llm: the model's choice (last resort).
+SignSource = Literal["column", "marker", "convention", "balance", "llm"]
 BalanceStatus = Literal["ok", "mismatch", "no_balance"]
 AccountType = Literal["deposit", "card"]
 

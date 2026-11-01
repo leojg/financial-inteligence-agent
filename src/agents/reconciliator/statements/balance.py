@@ -111,10 +111,15 @@ def _check_chain(
             amounts = _readable(members)
             if len(amounts) != len(members):
                 breaks.append(
-                    {"row_index": rows[position].row_index, "page": rows[position].page,
-                     "expected": None, "printed": float(printed), "gap": None,
-                     "reason": "unreadable amount"}
-                )  # fmt: skip
+                    {
+                        "row_index": rows[position].row_index,
+                        "page": rows[position].page,
+                        "expected": None,
+                        "printed": float(printed),
+                        "gap": None,
+                        "reason": "unreadable amount",
+                    }
+                )
             else:
                 expected = previous + direction * sum(amounts, _ZERO)
                 fix = None
@@ -126,11 +131,16 @@ def _check_chain(
                     verified += 1
                 else:
                     breaks.append(
-                        {"row_index": rows[position].row_index, "page": rows[position].page,
-                         "first_row_index": members[0].row_index,
-                         "expected": float(expected), "printed": float(printed),
-                         "gap": float(printed - expected), "reason": "balance does not follow"}
-                    )  # fmt: skip
+                        {
+                            "row_index": rows[position].row_index,
+                            "page": rows[position].page,
+                            "first_row_index": members[0].row_index,
+                            "expected": float(expected),
+                            "printed": float(printed),
+                            "gap": float(printed - expected),
+                            "reason": "balance does not follow",
+                        }
+                    )
         previous = printed  # resync: one bad row does not cascade
         segment = []
     return verified, breaks

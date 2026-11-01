@@ -14,6 +14,10 @@ from typing import Any
 
 from agents.reconciliator.statements.balance import check_balance, diagnostic
 from agents.reconciliator.statements.header import HeaderSection, StatementHeader
+from agents.reconciliator.statements.table_reader import (
+    TABLE_EXTRACTOR_VERSION,
+    TableReading,
+)
 from shared.models import Statement, StatementRow, Transaction
 from shared.parsing import balance_row_kind
 
@@ -73,9 +77,10 @@ def row_diagnostics(statement: Statement) -> list[dict[str, Any]]:
         )
     if statement.period_start and statement.period_end:
         outside = [
-            r for r in statement.rows
+            r
+            for r in statement.rows
             if r.date and not statement.period_start <= r.date <= statement.period_end
-        ]  # fmt: skip
+        ]
         if outside:
             found.append(
                 diagnostic(
@@ -143,9 +148,15 @@ def legacy_statements(
                 )
             )
         statement = new_statement(
-            source_file, file_sha256, header, section, rows,
-            "legacy", LEGACY_EXTRACTOR_VERSION, extra,
-        )  # fmt: skip
+            source_file,
+            file_sha256,
+            header,
+            section,
+            rows,
+            "legacy",
+            LEGACY_EXTRACTOR_VERSION,
+            extra,
+        )
         statement = statement.model_copy(
             update={
                 "diagnostics": [*statement.diagnostics, *row_diagnostics(statement)]
@@ -157,6 +168,72 @@ def legacy_statements(
             for t in by_section[index]
         )
     return statements, linked
+
+
+def table_statements(
+    source_file: str,
+    file_sha256: str,
+    header: StatementHeader,
+    reading: TableReading,
+    extractor: str = "table",
+    extractor_version: str = TABLE_EXTRACTOR_VERSION,
+) -> list[Statement]:
+    """Return unchecked Statements, one per currency, from a header and the rows read from the table.
+
+    Balance rows found inside the table win over the header's labeled lines,
+    because the table says which column they sat in.
+    """
+    default = header.sections[0].currency if len(header.sections) == 1 else None
+    row_currencies = [c or default for c in reading.row_currencies]
+    currencies: list[str | None] = (
+        list(dict.fromkeys(row_currencies))
+        or [s.currency for s in header.sections]
+        or [default]
+    )
+    single = len(currencies) == 1
+
+    statements: list[Statement] = []
+    for position, currency in enumerate(currencies):
+        rows = [
+            row.model_copy(update={"row_index": i})
+            for i, row in enumerate(
+                r for r, c in zip(reading.rows, row_currencies) if c == currency
+            )
+        ]
+        printed = (
+            header.section(currency)
+            if currency or not header.sections
+            else header.sections[0]
+        )
+
+        def from_table(found: dict[str | None, str]) -> str | None:
+            return found.get(currency) or (found.get(None) if single else None)
+
+        section = HeaderSection(
+            currency=currency,
+            opening_raw=from_table(reading.opening_raw) or printed.opening_raw,
+            closing_raw=from_table(reading.closing_raw) or printed.closing_raw,
+            debits_raw=printed.debits_raw,
+            credits_raw=printed.credits_raw,
+        )
+        statement = new_statement(
+            source_file,
+            file_sha256,
+            header,
+            section,
+            rows,
+            extractor,
+            extractor_version,
+            reading.diagnostics if position == 0 else None,
+        )
+        statements.append(
+            statement.model_copy(
+                update={
+                    "diagnostics": [*statement.diagnostics, *row_diagnostics(statement)]
+                }
+            )
+        )
+    return statements
 
 
 def unreadable_statement(

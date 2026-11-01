@@ -83,15 +83,21 @@ def _no_balance_pdf(tmp_path: Path) -> Path:
 def test_header_llm_fills_gaps_and_values_must_be_in_the_text(tmp_path: Path) -> None:
     document = load_pdf(str(_no_balance_pdf(tmp_path)))
     transcription = HeaderTranscription(
-        institution=None, account_as_printed=None, account_type=None,
-        period_start_as_printed=None, period_end_as_printed=None,
-        sections=[{
-            "currency_as_printed": "$",
-            "opening_balance_as_printed": "15.000,00",  # not printed anywhere: dropped
-            "closing_balance_as_printed": "5.459,50",
-            "total_debits_as_printed": None, "total_credits_as_printed": None,
-        }],
-    )  # fmt: skip
+        institution=None,
+        account_as_printed=None,
+        account_type=None,
+        period_start_as_printed=None,
+        period_end_as_printed=None,
+        sections=[
+            {
+                "currency_as_printed": "$",
+                "opening_balance_as_printed": "15.000,00",  # not printed anywhere: dropped
+                "closing_balance_as_printed": "5.459,50",
+                "total_debits_as_printed": None,
+                "total_credits_as_printed": None,
+            }
+        ],
+    )
     header = read_header_with_fallback(document, lambda d: transcription)
     section = header.sections[0]
     assert section.closing_raw == "5.459,50"
@@ -119,24 +125,36 @@ def _tx(
     date: str = "2026-01-05",
 ) -> Transaction:
     return Transaction(
-        id=f"t{i}", date=date, amount_original=amount, currency=currency,
-        merchant=merchant, account="BROU", source_file="s.pdf",
-    )  # fmt: skip
+        id=f"t{i}",
+        date=date,
+        amount_original=amount,
+        currency=currency,
+        merchant=merchant,
+        account="BROU",
+        source_file="s.pdf",
+    )
 
 
 def _header(
     opening: str | None = "15.000,00", closing: str | None = "5.459,50"
 ) -> StatementHeader:
     return StatementHeader(
-        account="7203", period_start="2026-01-01", period_end="2026-01-31",
-        sections=[HeaderSection(currency="UYU", opening_raw=opening, closing_raw=closing)],
-    )  # fmt: skip
+        account="7203",
+        period_start="2026-01-01",
+        period_end="2026-01-31",
+        sections=[
+            HeaderSection(currency="UYU", opening_raw=opening, closing_raw=closing)
+        ],
+    )
 
 
 LEGACY_OK = [
-    ("PAGO ALQUILER", -8500.0), ("TRANSFERENCIA RECIBIDA ITAU", 4000.0),
-    ("UTE FACTURA", -2340.5), ("COMPRA DISCO", -1200.0), ("RETIRO CAJERO", -1500.0),
-]  # fmt: skip
+    ("PAGO ALQUILER", -8500.0),
+    ("TRANSFERENCIA RECIBIDA ITAU", 4000.0),
+    ("UTE FACTURA", -2340.5),
+    ("COMPRA DISCO", -1200.0),
+    ("RETIRO CAJERO", -1500.0),
+]
 
 
 def test_legacy_statement_closes_and_links_transactions() -> None:
@@ -233,9 +251,14 @@ def test_generate_report_persists_statements_and_reports_them() -> None:
         "s.pdf", "sha", _header(closing="5.000,00"), txs
     )
     state: dict[str, Any] = {
-        "transactions": linked, "duplicates": [], "suspicious": [], "receipts": [],
-        "statements": statements, "run_id": "run-1", "source_paths": ["s.pdf"],
-    }  # fmt: skip
+        "transactions": linked,
+        "duplicates": [],
+        "suspicious": [],
+        "receipts": [],
+        "statements": statements,
+        "run_id": "run-1",
+        "source_paths": ["s.pdf"],
+    }
     result = generate_report(state, {"configurable": {"thread_id": "th"}})
     assert "Statements: 1 (mismatch 1)" in result["report"]
     assert "gap -459.50" in result["report"]

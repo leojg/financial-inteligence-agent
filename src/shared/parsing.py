@@ -52,6 +52,9 @@ class ParsedAmount:
     raw: str
     candidates: tuple[Decimal, ...]
     sign: int | None  # -1 / +1 when the string itself says so, else None
+    sign_word: bool = (
+        False  # the sign came from a CR/DB word, not a minus or parentheses
+    )
 
     @property
     def magnitude(self) -> Decimal | None:
@@ -139,12 +142,14 @@ def parse_amount(
         return ParsedAmount(raw=raw or "", candidates=(), sign=None)
 
     sign: int | None = None
+    sign_word = False
     body = text.replace(" ", " ")
 
     marker = _SIGN_MARKER.search(body)
     if marker:
         word = (marker.group(1) or marker.group(2)).upper()
         sign = 1 if word.startswith("CR") else -1
+        sign_word = True
         body = _SIGN_MARKER.sub("", body)
 
     body = _AMOUNT_NOISE.sub("", body).strip()
@@ -162,7 +167,10 @@ def parse_amount(
     if not _NUMBER_BODY.match(body):
         return ParsedAmount(raw=text, candidates=(), sign=None)
     return ParsedAmount(
-        raw=text, candidates=tuple(_magnitudes(body, decimal)), sign=sign
+        raw=text,
+        candidates=tuple(_magnitudes(body, decimal)),
+        sign=sign,
+        sign_word=sign_word,
     )
 
 
@@ -193,10 +201,24 @@ def to_cents(value: Decimal) -> Decimal:
 # ── Dates ─────────────────────────────────────────────────────────────────────
 
 _MONTHS = {
-    "ENE": 1, "JAN": 1, "FEB": 2, "MAR": 3, "ABR": 4, "APR": 4, "MAY": 5,
-    "JUN": 6, "JUL": 7, "AGO": 8, "AUG": 8, "SET": 9, "SEP": 9, "OCT": 10,
-    "NOV": 11, "DIC": 12, "DEC": 12,
-}  # fmt: skip
+    "ENE": 1,
+    "JAN": 1,
+    "FEB": 2,
+    "MAR": 3,
+    "ABR": 4,
+    "APR": 4,
+    "MAY": 5,
+    "JUN": 6,
+    "JUL": 7,
+    "AGO": 8,
+    "AUG": 8,
+    "SET": 9,
+    "SEP": 9,
+    "OCT": 10,
+    "NOV": 11,
+    "DIC": 12,
+    "DEC": 12,
+}
 
 _ISO = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 _NUMERIC = re.compile(r"^(\d{1,2})[/.\-](\d{1,2})(?:[/.\-](\d{2}|\d{4}))?$")
@@ -330,10 +352,12 @@ _CLOSING = re.compile(
 
 def balance_label(text: str) -> tuple[Literal["opening", "closing"], int] | None:
     """Return the balance kind a folded line names and where its label ends, or None."""
-    for kind, pattern in (("opening", _OPENING), ("closing", _CLOSING)):
-        match = pattern.search(text)
-        if match:
-            return kind, match.end()  # type: ignore[return-value]
+    opening = _OPENING.search(text)
+    if opening:
+        return "opening", opening.end()
+    closing = _CLOSING.search(text)
+    if closing:
+        return "closing", closing.end()
     return None
 
 

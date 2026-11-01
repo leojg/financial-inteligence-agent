@@ -135,3 +135,36 @@ def deposit_layout(rows_per_page: int = 30) -> StatementLayout:
         rows_per_page=rows_per_page,
         page_header="BROU - Caja de Ahorros ****-7203",
     )
+
+
+CARD_COLUMNS = [
+    Column("Fecha", 40),
+    Column("Detalle", 100),
+    Column("Pesos", 450, "right"),
+    Column("Dólares", 545, "right"),
+]
+
+
+def card_layout() -> StatementLayout:
+    """Return a two-currency credit card statement (issuer convention: charges unsigned, payments negative).
+
+    Owed $ 1.000,00 / U$S 50,00 → payment, purchases, an installment →
+    owed $ 3.700,00 / U$S 100,00.
+    """
+    rows = [
+        ["02/01/2026", "SU PAGO", "-1.000,00", ""],
+        ["05/01/2026", "SUPERMERCADO DISCO", "2.500,00", ""],
+        ["10/01/2026", "NETFLIX.COM", "", "15,99"],
+        ["15/01/2026", "TIENDA INGLESA CUOTA 02/06", "1.200,00", ""],
+        ["20/01/2026", "AMAZON MKTPLACE", "", "34,01"],
+    ]
+    return StatementLayout(
+        title_lines=[
+            "Tarjeta de Crédito VISA ****2847",
+            "Período: 01/01/2026 al 31/01/2026",
+            "Saldo anterior $ 1.000,00 U$S 50,00",
+        ],
+        columns=CARD_COLUMNS,
+        rows=rows,
+        footer_lines=["Saldo a pagar $ 3.700,00 U$S 100,00", "Pago mínimo $ 500,00"],
+    )
