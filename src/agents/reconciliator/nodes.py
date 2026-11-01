@@ -20,15 +20,19 @@ from agents.reconciliator.state import ReconciliationState
 from agents.reconciliator.statements.build import (
     legacy_statements,
     report_lines,
+    statement_transactions,
     unreadable_statement,
 )
 from agents.reconciliator.statements.header import (
     make_header_transcriber,
     read_header_with_fallback,
 )
+from agents.reconciliator.statements.ladder import StatementExtractor, statement_files
+from agents.reconciliator.statements.llm_reader import make_page_transcriber
 from agents.reconciliator.statements.pdf import PdfReadError, file_sha256, load_pdf
 from agents.reconciliator.utils.parsers import load_documents
 from shared.models import RawDocument, Receipt, ReceiptLine, Statement, Transaction
+from shared.parsing import leading_balance_label
 from shared.repositories.database_repository import (
     DatabaseRepository as DatabaseService,
 )
@@ -89,6 +93,45 @@ def ingest(state: ReconciliationState) -> dict[str, Any]:
     ]
 
     return {"raw_documents": raw_documents, "receipts": []}
+
+
+def make_ingest_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return the ingest node; with the v1.6 reader, PDF statements are left to extract_statements."""
+    if config.statement_extractor == "legacy":
+        return ingest
+
+    def ingest_documents(state: ReconciliationState) -> dict[str, Any]:
+        files = [f for f in state["source_files"] if Path(f).suffix.lower() != ".pdf"]
+        return ingest({**state, "source_files": files})
+
+    return ingest_documents
+
+
+def make_extract_statements_node(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], dict[str, Any]]:
+    """Return a node that reads every PDF statement with the extraction ladder (v1.6 §3.3)."""
+    llm = ChatOpenAI(model=config.statement_model_name, temperature=config.temperature)
+    header_transcriber = (
+        make_header_transcriber(llm) if config.statement_header_llm else None
+    )
+    page_transcriber = make_page_transcriber(llm)
+
+    def extract_statements(state: ReconciliationState) -> dict[str, Any]:
+        extractor = StatementExtractor(
+            config,
+            header_transcriber=header_transcriber,
+            page_transcriber=page_transcriber,
+            repository=DatabaseService(),
+        )
+        statements: list[Statement] = []
+        for path in statement_files(state["source_files"]):
+            statements.extend(extractor.extract(path))
+        return {"statements": statements}
+
+    return extract_statements
 
 
 def make_ingest_images_node(
@@ -316,6 +359,16 @@ def make_normalize_node(
                 logger.warning("Failed to normalize %s: %s", doc.source_file, e)
                 continue
 
+        if config.statement_extractor != "legacy":
+            balance_rows = [
+                t for t in transactions if leading_balance_label(t.merchant)
+            ]
+            if balance_rows:
+                logger.info(
+                    "normalize: dropped %d opening/closing balance rows",
+                    len(balance_rows),
+                )
+                transactions = [t for t in transactions if t not in balance_rows]
         return {"transactions": transactions}
 
     return normalize
@@ -399,11 +452,13 @@ def make_review_low_confidence_transactions_node(
 def make_check_statements_node(
     config: ReconciliationConfig,
 ) -> Callable[[ReconciliationState], dict[str, Any]]:
-    """Return a node that builds and balance-checks one Statement per PDF statement (v1.6).
+    """Return a node that turns PDF statements into checked Statements and their transactions (v1.6).
 
-    With the ``legacy`` extractor, statements are built from the transactions
-    ``normalize`` produced for each PDF, which stay as they are: the check only
-    measures them (v1.6 phase 1).
+    With the v1.6 reader, ``extract_statements`` already read and checked the
+    statements; here their rows become transactions, next to the ones
+    ``normalize`` produced for other files. With the ``legacy`` extractor,
+    statements are built from the transactions ``normalize`` produced for each
+    PDF, which stay as they are: the check only measures them (v1.6 phase 1).
     """
     transcribe = (
         make_header_transcriber(
@@ -425,7 +480,16 @@ def make_check_statements_node(
             for s in state.get("statements") or []
         ]
         if config.statement_extractor != "legacy":
-            return {"statements": statements}
+            converted: list[Statement] = []
+            from_statements: list[Transaction] = []
+            for statement in statements:
+                rows, statement = statement_transactions(statement)
+                converted.append(statement)
+                from_statements.extend(rows)
+            return {
+                "statements": converted,
+                "transactions": [*transactions, *from_statements],
+            }
 
         pdfs = [
             f
@@ -976,7 +1040,12 @@ def generate_report(
     ]
     statement_lines = report_lines(statements)
     if statement_lines:
-        report += "\n".join(f"    {line}" for line in statement_lines) + "\n"
+        report = (
+            report.rstrip()
+            + "\n\n"
+            + "\n".join(f"    {line}" for line in statement_lines)
+            + "\n"
+        )
 
     run_id = state.get("run_id")
     if run_id:

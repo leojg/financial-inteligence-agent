@@ -19,10 +19,11 @@ class ReconciliationConfig:
     temperature: float = 0.0
     base_currency: str = "USD"
     image_low_confidence_threshold: float = 0.98
-    # Statements (v1.6). "legacy" keeps the per-page LLM normalization and only
-    # measures it against the statement's balances; "ladder" is the v1.6 reader.
+    # Statements (v1.6). "ladder" reads PDF statements with the v1.6 reader
+    # (table reader, then LLM transcription, each checked against the balances);
+    # "legacy" keeps the per-page LLM normalization and only measures it.
     statement_extractor: str = field(
-        default_factory=lambda: os.getenv("STATEMENT_EXTRACTOR", "legacy")
+        default_factory=lambda: os.getenv("STATEMENT_EXTRACTOR", "ladder")
     )
     statement_model_name: str = field(
         default_factory=lambda: os.getenv("STATEMENT_MODEL", "gpt-5.4-mini")

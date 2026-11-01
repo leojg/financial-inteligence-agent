@@ -11,13 +11,14 @@ from agents.reconciliator.configuration import DEFAULT_CONFIG, ReconciliationCon
 from agents.reconciliator.nodes import (
     generate_report,
     human_review,
-    ingest,
     make_categorize_node,
     make_check_statements_node,
     make_convert_currency_node,
     make_detect_duplicates_node,
+    make_extract_statements_node,
     make_flag_suspicious_node,
     make_ingest_images_node,
+    make_ingest_node,
     make_normalize_node,
     make_review_low_confidence_transactions_node,
     passthrough,
@@ -36,14 +37,40 @@ def _has_images(state: ReconciliationState) -> str:
     return "skip_images"
 
 
-def _has_documents(state: ReconciliationState) -> str:
-    """Return 'ingest' if source_files has document paths, else 'skip_documents'."""
-    exts = (".csv", ".xlsx", ".xls", ".pdf")
-    source_files = state["source_files"]
-    for path in source_files:
-        if Path(path).suffix.lower() in exts:
-            return "ingest"
-    return "skip_documents"
+def _make_has_documents(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], str]:
+    """Return a conditional edge fn: 'ingest' if there are documents for normalize, else 'skip_documents'.
+
+    With the v1.6 reader, PDF statements go to extract_statements instead.
+    """
+    exts: tuple[str, ...] = (".csv", ".xlsx", ".xls")
+    if config.statement_extractor == "legacy":
+        exts = (*exts, ".pdf")
+
+    def _has_documents(state: ReconciliationState) -> str:
+        for path in state["source_files"]:
+            if Path(path).suffix.lower() in exts:
+                return "ingest"
+        return "skip_documents"
+
+    return _has_documents
+
+
+def _make_has_statements(
+    config: ReconciliationConfig,
+) -> Callable[[ReconciliationState], str]:
+    """Return a conditional edge fn: 'extract_statements' when the v1.6 reader has PDFs to read."""
+
+    def _has_statements(state: ReconciliationState) -> str:
+        if config.statement_extractor == "legacy":
+            return "skip_statements"
+        for path in state["source_files"]:
+            if Path(path).suffix.lower() == ".pdf":
+                return "extract_statements"
+        return "skip_statements"
+
+    return _has_statements
 
 
 def _make_has_low_confidence(threshold: float) -> Callable[[ReconciliationState], str]:
@@ -77,7 +104,8 @@ def make_graph(
     graph = StateGraph(ReconciliationState)
 
     graph.add_node("prepare_ingest", prepare_ingest)
-    graph.add_node("ingest", ingest)
+    graph.add_node("ingest", make_ingest_node(config))  # type: ignore[arg-type]
+    graph.add_node("extract_statements", make_extract_statements_node(config))  # type: ignore[arg-type]
     graph.add_node("ingest_images", make_ingest_images_node(config))  # type: ignore[arg-type]
     graph.add_node("normalize", make_normalize_node(config))  # type: ignore[arg-type]
     graph.add_node("check_statements", make_check_statements_node(config))  # type: ignore[arg-type]
@@ -93,12 +121,21 @@ def make_graph(
     graph.add_node("generate_report", generate_report)
     graph.add_node("skip_images", passthrough)
     graph.add_node("skip_documents", passthrough)
+    graph.add_node("skip_statements", passthrough)
 
     graph.add_edge(START, "prepare_ingest")
     graph.add_conditional_edges(
         "prepare_ingest",
-        _has_documents,
+        _make_has_documents(config),
         {"ingest": "ingest", "skip_documents": "skip_documents"},
+    )
+    graph.add_conditional_edges(
+        "prepare_ingest",
+        _make_has_statements(config),
+        {
+            "extract_statements": "extract_statements",
+            "skip_statements": "skip_statements",
+        },
     )
     graph.add_conditional_edges(
         "prepare_ingest",
@@ -109,6 +146,8 @@ def make_graph(
     graph.add_edge("ingest_images", "normalize")
     graph.add_edge("skip_images", "normalize")
     graph.add_edge("skip_documents", "normalize")
+    graph.add_edge("extract_statements", "normalize")
+    graph.add_edge("skip_statements", "normalize")
 
     graph.add_edge("normalize", "check_statements")
     graph.add_conditional_edges(

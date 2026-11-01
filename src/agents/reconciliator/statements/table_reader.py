@@ -32,9 +32,9 @@ from agents.reconciliator.statements.profiles import GENERIC, BankProfile
 from shared.models import AccountType, SignSource, StatementRow
 from shared.parsing import (
     DecimalSeparator,
-    balance_label,
     detect_decimal_separator,
     fold,
+    leading_balance_label,
     looks_like_date,
     parse_amount,
     parse_currency,
@@ -148,7 +148,9 @@ class Column:
 
 
 @dataclass
-class _Cells:
+class Cells:
+    """One movement's cells as printed, before parsing (shared by the table reader and the LLM rung)."""
+
     page: int
     top: float
     raw_text: str
@@ -261,25 +263,11 @@ def _date_prefix(words: list[PdfWord]) -> tuple[str | None, int]:
     return best
 
 
-_BALANCE_ROW_START = (
-    "SALDO",
-    "OPENING",
-    "CLOSING",
-    "PREVIOUS BALANCE",
-    "NEW BALANCE",
-    "BALANCE",
-    "NUEVO SALDO",
-)
-
-
-def _balance_row(cells: _Cells, text: str) -> str | None:
+def _balance_row(cells: Cells, text: str) -> str | None:
     """Return "opening"/"closing" when the line is a balance row (its description starts with the label)."""
-    description = fold(" ".join(cells.description))
-    candidate = description if cells.date_raw else text
-    if not candidate.startswith(_BALANCE_ROW_START):
-        return None
-    found = balance_label(candidate)
-    return found[0] if found else None
+    return leading_balance_label(
+        " ".join(cells.description) if cells.date_raw else text
+    )
 
 
 def _is_amount(word: PdfWord, numeric_start: float, money_only: bool) -> bool:
@@ -295,7 +283,7 @@ def _cells(
     columns: list[Column],
     numeric_start: float,
     money_only: bool,
-) -> tuple[_Cells, list[str]]:
+) -> tuple[Cells, list[str]]:
     """Split a line into cells; return them and any problems placing numbers."""
     problems: list[str] = []
     date_raw, used = _date_prefix(line.words)
@@ -307,7 +295,7 @@ def _cells(
         and any(c.kind == "value_date" for c in columns)
     ):
         rest = rest[1:]  # the value date
-    cells = _Cells(page=line.page, top=line.top, raw_text=line.text, date_raw=date_raw)
+    cells = Cells(page=line.page, top=line.top, raw_text=line.text, date_raw=date_raw)
 
     numeric_columns = [c for c in columns if c.kind in NUMERIC_KINDS]
     text_columns = [
@@ -397,7 +385,7 @@ def read_table(
     skips = [re.compile(s) for s in profile.skip_lines]
     columns: list[Column] | None = None
     numeric_start = 0.0
-    cells_rows: list[_Cells] = []
+    cells_rows: list[Cells] = []
     ignored_with_numbers: list[str] = []
     placement_problems: list[str] = []
     gaps: list[float] = []
@@ -484,31 +472,20 @@ def read_table(
                 last.raw_text += "\n" + line.text
                 last.top = line.top
                 continue
-            if cells.numbers:
-                ignored_with_numbers.append(line.text)
+            if cells.numbers and not _SUMMARY.search(text):
+                ignored_with_numbers.append(
+                    line.text
+                )  # summaries are skipped on purpose
 
-    reading.decimal = profile.decimal or detect_decimal_separator(
-        raw for c in cells_rows for raw in c.numbers.values()
+    parse_cells(
+        cells_rows,
+        reading,
+        period_start,
+        period_end,
+        account_type,
+        profile,
+        local_currency,
     )
-    card_as_printed = _card_signs_as_printed(cells_rows, account_type, profile, reading)
-    last_date: str | None = None
-    for index, cells in enumerate(cells_rows):
-        row, currency = _row(
-            index,
-            cells,
-            reading,
-            period_start,
-            period_end,
-            account_type,
-            profile,
-            local_currency,
-            card_as_printed,
-        )
-        if row.date is None and cells.date_raw is None and last_date:
-            row = row.model_copy(update={"date": last_date})
-        last_date = row.date or last_date
-        reading.rows.append(row)
-        reading.row_currencies.append(currency)
 
     if ignored_with_numbers:
         reading.diagnostics.append(
@@ -539,8 +516,42 @@ def read_table(
     return reading
 
 
+def parse_cells(
+    cells_rows: list[Cells],
+    reading: TableReading,
+    period_start: str | None,
+    period_end: str | None,
+    account_type: AccountType | None,
+    profile: BankProfile = GENERIC,
+    local_currency: str | None = "UYU",
+) -> None:
+    """Parse printed cells into ``reading.rows`` / ``reading.row_currencies`` (amounts, signs, dates)."""
+    reading.decimal = profile.decimal or detect_decimal_separator(
+        raw for c in cells_rows for raw in c.numbers.values()
+    )
+    card_as_printed = _card_signs_as_printed(cells_rows, account_type, profile, reading)
+    last_date: str | None = None
+    for index, cells in enumerate(cells_rows):
+        row, currency = _row(
+            index,
+            cells,
+            reading,
+            period_start,
+            period_end,
+            account_type,
+            profile,
+            local_currency,
+            card_as_printed,
+        )
+        if row.date is None and cells.date_raw is None and last_date:
+            row = row.model_copy(update={"date": last_date})
+        last_date = row.date or last_date
+        reading.rows.append(row)
+        reading.row_currencies.append(currency)
+
+
 def _card_signs_as_printed(
-    cells_rows: list[_Cells],
+    cells_rows: list[Cells],
     account_type: AccountType | None,
     profile: BankProfile,
     reading: TableReading,
@@ -576,7 +587,7 @@ def _card_signs_as_printed(
 
 def _row(
     index: int,
-    cells: _Cells,
+    cells: Cells,
     reading: TableReading,
     period_start: str | None,
     period_end: str | None,

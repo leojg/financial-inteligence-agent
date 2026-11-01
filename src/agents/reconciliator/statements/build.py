@@ -236,6 +236,90 @@ def table_statements(
     return statements
 
 
+UNKNOWN_CURRENCY = (
+    "XXX"  # ISO 4217 "no currency": never a guess, always flagged for review
+)
+
+
+def statement_account(statement: Statement) -> str:
+    """Return the account label for a statement's transactions (``Itaú ****2847``)."""
+    masked = f"****{statement.account[-4:]}" if statement.account else None
+    parts = [p for p in (statement.institution, masked) if p]
+    return " ".join(parts) or Path(statement.source_file).stem
+
+
+def statement_transactions(statement: Statement) -> tuple[list[Transaction], Statement]:
+    """Return a statement's rows as Transactions, and the statement with any conversion diagnostics.
+
+    Rows inside a running-balance break, rows whose date had to be taken from the
+    previous row, and rows of a statement without a currency are flagged for
+    review. Rows with no readable amount, or no date at all, cannot become
+    transactions and are counted.
+    """
+    flagged: set[int] = set()
+    for b in statement.breaks:
+        flagged.update(
+            range(
+                int(b.get("first_row_index", b["row_index"])), int(b["row_index"]) + 1
+            )
+        )
+    account = statement_account(statement)
+    currency = statement.currency or UNKNOWN_CURRENCY
+    transactions: list[Transaction] = []
+    skipped = 0
+    previous_date = statement.period_start
+    for row in statement.rows:
+        reasons: list[str] = []
+        date = row.date
+        if date is None and previous_date:
+            date = previous_date
+            reasons.append("date not readable: previous row's date used")
+        if row.amount is None or date is None:
+            skipped += 1
+            continue
+        previous_date = date
+        if statement.currency is None:
+            reasons.append("currency not printed on the statement")
+        if row.row_index in flagged:
+            reasons.append("running balance does not follow here")
+        transactions.append(
+            Transaction(
+                id=str(uuid.uuid4()),
+                date=date,
+                amount_original=row.amount,
+                currency=currency,
+                merchant=row.description_raw or "(no description)",
+                account=account,
+                source_file=statement.source_file,
+                needs_review=bool(reasons),
+                review_reason="; ".join(reasons) or None,
+                statement_id=statement.id,
+                page=row.page,
+                row_index=row.row_index,
+                raw_text=row.raw_text,
+                amount_raw=row.debit_raw or row.credit_raw or row.amount_raw,
+                balance_after=row.balance_after,
+                sign_source=row.sign_source,
+                installment_n=row.installment_n,
+                installment_m=row.installment_m,
+            )
+        )
+    if skipped:
+        statement = statement.model_copy(
+            update={
+                "diagnostics": [
+                    *statement.diagnostics,
+                    diagnostic(
+                        "rows_not_converted",
+                        "rows without a readable amount or date did not become transactions",
+                        count=skipped,
+                    ),
+                ]
+            }
+        )
+    return transactions, statement
+
+
 def unreadable_statement(
     source_file: str, file_sha256: str, reason: str, detail: str
 ) -> Statement:

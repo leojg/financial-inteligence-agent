@@ -234,17 +234,6 @@ def test_check_statements_node_unreadable_pdf_is_not_silent(tmp_path: Path) -> N
     assert result["statements"][0].diagnostics[0]["reason"] == "unreadable_pdf"
 
 
-def test_check_statements_node_does_nothing_for_other_extractors(
-    deposit_pdf: Path,
-) -> None:
-    with patch("agents.reconciliator.nodes.ChatOpenAI"):
-        node = make_check_statements_node(_config("ladder"))
-    result = node(
-        {"transactions": [], "source_files": [str(deposit_pdf)], "statements": []}
-    )
-    assert result == {"statements": []}
-
-
 def test_generate_report_persists_statements_and_reports_them() -> None:
     txs = [_tx(i, m, a) for i, (m, a) in enumerate(LEGACY_OK)]
     statements, linked = legacy_statements(

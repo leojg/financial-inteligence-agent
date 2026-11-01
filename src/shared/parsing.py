@@ -367,6 +367,29 @@ def balance_row_kind(description: str | None) -> Literal["opening", "closing"] |
     return found[0] if found else None
 
 
+_BALANCE_ROW_START = (
+    "SALDO",
+    "OPENING",
+    "CLOSING",
+    "PREVIOUS BALANCE",
+    "NEW BALANCE",
+    "BALANCE",
+    "NUEVO SALDO",
+)
+
+
+def leading_balance_label(
+    description: str | None,
+) -> Literal["opening", "closing"] | None:
+    """Return the balance kind when a row *starts* with a balance label.
+
+    A movement may mention a balance ("PAGO SALDO A PAGAR VISA"); only a row
+    whose description starts with the label is the statement's own balance.
+    """
+    text = fold(description or "")
+    return balance_row_kind(text) if text.startswith(_BALANCE_ROW_START) else None
+
+
 _INSTALLMENT = re.compile(
     r"\b(?:CUOTAS?|CTAS?\.?|C\.)\s*(\d{1,2})\s*(?:/|DE)\s*(\d{1,2})\b|\b(\d{1,2})\s*/\s*(\d{1,2})\s+CUOTAS?\b"
 )
