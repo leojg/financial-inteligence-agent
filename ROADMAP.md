@@ -293,15 +293,39 @@ The v1.4 normalize eval scores 100% on synthetic statements that are far cleaner
 - Extraction ladder: structured exports (XLSX/XLS/CSV) parsed deterministically → per-bank PDF profiles (word coordinates) → hardened LLM (transcribe-only, whole-statement header, text + image, anchors, page counts, targeted retry) → review
 - Number, date, currency and sign parsing in code, raw string kept beside every parsed value, unparsable = NULL
 - No silent loss: every dropped file, page and row counted with a reason
-- Expense-report correctness: transaction `kind`, own-account transfer and card-payment pairing, balance rows out of transactions, installments billed per cuota with plan tracking, configurable report currency (default USD), unconverted amounts reported
-- Email source (new module): statement PDFs from attachments, notification bodies as provisional rows cross-checked against the statement, polled read-only with a processed-message ledger
+- Expense-report correctness: transaction `kind`, own-account transfer and card-payment pairing, balance rows out of transactions, installments counted as billed and kept out of recurring-charge detection, configurable report currency (default USD), unconverted amounts reported
 - Private real-statement eval set (gitignored, run locally) and a more realistic synthetic set
 
 **Does not deliver:**
 - Review and report UI (stage 2)
 - Categorization changes (v1.5)
+- Email ingestion (v1.7)
+- Installment plan totals (backlog)
 
 **Full spec:** `docs/v1.6-statement-accuracy.md`
+
+---
+
+## v1.7 — Email Ingestion
+
+*Goal: read financial emails from Gmail — statements sent as PDF attachments and per-movement notification emails — so statements no longer have to be uploaded by hand and the current month is visible before its statement arrives.*
+
+Builds on v1.6: attachments go through its PDF extraction, and notifications are checked against its statements.
+
+**Scope:**
+- Gmail only, read-only (`gmail.readonly`), polled on a schedule with a bounded query; behind an `EmailSource` interface
+- `email_messages` ledger: a message is `done` only after its rows or statement are written; failures keep their reason and are retried up to a cap
+- Statement attachments through the v1.6 PDF path
+- Notification emails as provisional transactions, matched to statement rows when the statement arrives; unmatched notifications reported as a diagnostic
+- Sender allowlist + DKIM/SPF check; links never followed
+- Poller command and a compose service behind `--profile email`
+
+**Does not deliver:**
+- Other email providers
+- Sending email (the n8n *Email → Reconcile → Notify* workflow stays in the backlog)
+- UI for provisional rows and unmatched notifications (stage 2)
+
+**Full spec:** `docs/v1.7-email-ingestion.md`
 
 ---
 
@@ -342,6 +366,7 @@ Follow-ups deferred from the v1.4 evaluation framework; see `docs/v1.4-evaluatio
 - **Chat date range filtering** — Allow the chat agent to operate on a scoped date range instead of always full range. Requires insights to always maintain a full-range cache alongside scoped runs.
 - **Insights cache relational refactor** — Split habits and suggestions out of the JSON blob in `insights_cache` into proper relational tables with typed columns (category, severity, observation). Enables querying by severity, tracking insight evolution across runs, and safer schema migrations.
 - **Crypto / Bitcoin mining income** — BTC transaction ingestion and cost basis tracking
+- **Installment plan totals** — follows v1.6's as-billed handling: link the cuotas of one purchase into a plan, report committed future cuotas, offer a purchase-date view, and split interest surcharges from the purchase.
 - **Budget vs actual** — compare reconciled spending against a defined monthly budget
 - **Web deployment** — hosted version with user accounts and cloud storage
 - **Bank API integration** — replace manual statement imports with Plaid or open banking APIs
