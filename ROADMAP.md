@@ -293,8 +293,9 @@ The v1.4 normalize eval scores 100% on synthetic statements that are far cleaner
 - Extraction ladder: structured exports (XLSX/XLS/CSV) parsed deterministically → per-bank PDF profiles (word coordinates) → hardened LLM (transcribe-only, whole-statement header, text + image, anchors, page counts, targeted retry) → review
 - Number, date, currency and sign parsing in code, raw string kept beside every parsed value, unparsable = NULL
 - No silent loss: every dropped file, page and row counted with a reason
-- Expense-report correctness: transaction `kind`, own-account transfer and card-payment pairing, balance rows out of transactions, unconverted amounts reported
-- Private real-statement eval set (gitignored) and a more realistic synthetic set
+- Expense-report correctness: transaction `kind`, own-account transfer and card-payment pairing, balance rows out of transactions, installments billed per cuota with plan tracking, configurable report currency (default USD), unconverted amounts reported
+- Email source (new module): statement PDFs from attachments, notification bodies as provisional rows cross-checked against the statement, polled read-only with a processed-message ledger
+- Private real-statement eval set (gitignored, run locally) and a more realistic synthetic set
 
 **Does not deliver:**
 - Review and report UI (stage 2)
